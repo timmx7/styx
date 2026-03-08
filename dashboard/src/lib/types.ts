@@ -354,3 +354,21 @@ export interface WebhookDelivery {
   success: boolean;
   created_at: string;
 }
+
+// ─── Router model catalog ──────────────────────────────────────
+
+export interface RouterModelPricing {
+  input_per_million: number;
+  output_per_million: number;
+  currency: string; // "USD"
+}
+
+export interface RouterModel {
+  id: string;
+  object: string;
+  owned_by: string;
+  provider: string;
+  tier?: string;
+  available: boolean;
+  pricing?: RouterModelPricing;
+}

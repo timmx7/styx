@@ -10,6 +10,7 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+    NEXT_PUBLIC_ROUTER_URL: process.env.NEXT_PUBLIC_ROUTER_URL || "http://localhost:8080",
   },
 
   // ── Content Security Policy (D-C1) ─────────────────────────────────
@@ -27,9 +28,10 @@ const nextConfig = {
       "font-src 'self' data:",
       // Images: data URIs for icons/placeholders, blob for canvas exports
       "img-src 'self' data: blob: https:",
-      // API/WS connections: backend, Stripe, Supabase auth, Sentry
+      // API/WS connections: backend, router, Stripe, Supabase auth, Sentry
       // NEXT_PUBLIC_API_URL is baked at build time (e.g. http://localhost:8000 in dev)
-      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"} https://api.stripe.com https://*.supabase.co wss://*.supabase.co https://ingest.sentry.io`,
+      // NEXT_PUBLIC_ROUTER_URL is the Go router (e.g. http://localhost:8080 in dev)
+      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"} ${process.env.NEXT_PUBLIC_ROUTER_URL || "http://localhost:8080"} https://api.stripe.com https://*.supabase.co wss://*.supabase.co https://ingest.sentry.io`,
       // Stripe payment iframe
       "frame-src https://js.stripe.com",
       // Block plugins/objects entirely

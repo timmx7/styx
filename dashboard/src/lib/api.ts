@@ -29,6 +29,7 @@ import type {
   ABTestExperiment,
   ABTestExperimentCreate,
   ABTestExperimentUpdate,
+  RouterModel,
   WebhookEndpoint,
   WebhookEndpointCreate,
   WebhookEndpointUpdate,
@@ -36,6 +37,7 @@ import type {
 } from "./types";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const ROUTER_BASE = process.env.NEXT_PUBLIC_ROUTER_URL || "http://localhost:8080";
 
 const SKIP_AUTH = process.env.NEXT_PUBLIC_SKIP_AUTH === "true";
 
@@ -584,4 +586,19 @@ export async function getWebhookDeliveries(
   limit: number = 50
 ): Promise<WebhookDelivery[]> {
   return request<WebhookDelivery[]>(`/api/webhooks/${webhookId}/deliveries?limit=${limit}`);
+}
+
+// ─── Router model catalog ──────────────────────────────────────
+// Calls the Go router directly (NEXT_PUBLIC_ROUTER_URL) to get the live
+// model list with pricing.  No auth header is sent — the router's
+// /v1/models endpoint is open in dev mode and validated by Styx key in prod.
+
+export async function getAvailableModels(): Promise<RouterModel[]> {
+  const res = await fetch(`${ROUTER_BASE}/v1/models`, {
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch models: ${res.status}`);
+  const json = await res.json();
+  return (json.data ?? []) as RouterModel[];
 }
