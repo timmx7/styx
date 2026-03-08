@@ -1,0 +1,31 @@
+{{- if .Values.clickhouse.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "styx.clickhouseInitConfigMapName" . }}
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "clickhouse") | nindent 4 }}
+data:
+  init.sql: |
+    -- ClickHouse init script for Styx analytics
+    CREATE DATABASE IF NOT EXISTS {{ .Values.clickhouse.auth.database }};
+
+    CREATE TABLE IF NOT EXISTS {{ .Values.clickhouse.auth.database }}.routing_logs (
+        id UUID DEFAULT generateUUIDv4(),
+        project_id String,
+        provider String,
+        model String,
+        complexity String,
+        latency_ms Int32,
+        status_code Int32,
+        cache_hit UInt8,
+        was_fallback UInt8,
+        input_tokens Int32,
+        output_tokens Int32,
+        cost_cents Int32,
+        created_at DateTime DEFAULT now()
+    ) ENGINE = MergeTree()
+    ORDER BY (project_id, created_at)
+    PARTITION BY toYYYYMM(created_at)
+    TTL created_at + INTERVAL 90 DAY;
+{{- end }}

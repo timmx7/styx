@@ -1,0 +1,409 @@
+# ══════════════════════════════════════════════════════════════════════
+# Styx Security Pipeline — SAST / Dependency Scan / Container Scan
+# ══════════════════════════════════════════════════════════════════════
+#
+# Layers:
+#   1. SAST        → Bandit (Python), gosec (Go), ESLint security (TS)
+#   2. Dependency  → pip-audit, govulncheck, npm audit
+#   3. Container   → Trivy (Docker image scanning)
+#   4. Secrets     → Gitleaks (leaked credentials)
+#   5. Dockerfile  → Hadolint (best practices)
+#
+# All jobs run in parallel for fast feedback. Results are uploaded
+# as SARIF to GitHub Security tab when available.
+#
+# NOTE: Only safe GitHub context values (needs.*.result, secrets.GITHUB_TOKEN)
+# are used in run: blocks. No user-controlled input is interpolated.
+
+name: Security Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Allow manual trigger for ad-hoc security audits
+  workflow_dispatch:
+  # Run weekly even without code changes (catches new CVEs)
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write  # For SARIF upload to GitHub Security tab
+
+jobs:
+
+  # ─── 1. SAST: Python (Bandit) ──────────────────────────────────
+  sast-python:
+    name: "SAST: Python (Bandit)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Bandit
+        run: pip install bandit bandit-sarif-formatter
+
+      - name: Run Bandit on backend
+        run: |
+          bandit -r backend/ \
+            -c .bandit.yaml \
+            -f sarif \
+            -o bandit-backend.sarif \
+            --exit-zero
+
+      - name: Run Bandit on classifier
+        run: |
+          bandit -r classifier/ \
+            -c .bandit.yaml \
+            -f sarif \
+            -o bandit-classifier.sarif \
+            --exit-zero \
+            || true
+
+      - name: Run Bandit on cache-service
+        run: |
+          bandit -r cache-service/ \
+            -c .bandit.yaml \
+            -f sarif \
+            -o bandit-cache.sarif \
+            --exit-zero \
+            || true
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: bandit-backend.sarif
+          category: bandit-python
+
+      - name: Run Bandit (strict mode — fail on HIGH severity)
+        run: |
+          bandit -r backend/ \
+            -c .bandit.yaml \
+            -ll \
+            -ii \
+            --severity-level high
+
+  # ─── 2. SAST: Go (gosec) ──────────────────────────────────────
+  sast-go:
+    name: "SAST: Go (gosec)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: router/go.sum
+
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+
+      - name: Run gosec
+        working-directory: router
+        run: |
+          gosec -fmt sarif -out ../gosec-results.sarif -severity medium ./... || true
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: gosec-results.sarif
+          category: gosec-go
+
+      - name: Run gosec (strict — fail on HIGH)
+        working-directory: router
+        run: |
+          gosec -severity high -confidence high ./...
+
+  # ─── 3. SAST: TypeScript (ESLint Security) ────────────────────
+  sast-typescript:
+    name: "SAST: TypeScript (ESLint)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        working-directory: dashboard
+        run: npm ci
+
+      - name: Install ESLint security plugin
+        working-directory: dashboard
+        run: npm install --save-dev eslint-plugin-security
+
+      - name: Run ESLint with security rules
+        working-directory: dashboard
+        # Allow warnings (object-injection false positives), but fail on errors
+        run: npx eslint src/ --max-warnings 20
+
+  # ─── 4. Dependency Scan: Python (pip-audit) ────────────────────
+  deps-python:
+    name: "Deps: Python (pip-audit)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend, classifier, cache-service]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check if requirements.txt exists
+        id: check
+        run: |
+          if [ -f "${{ matrix.service }}/requirements.txt" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install pip-audit
+        if: steps.check.outputs.exists == 'true'
+        run: pip install pip-audit
+
+      - name: Run pip-audit
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          pip-audit \
+            -r "${{ matrix.service }}/requirements.txt" \
+            --desc on \
+            --fix --dry-run \
+            || echo "::warning::Vulnerabilities found in ${{ matrix.service }}"
+
+  # ─── 5. Dependency Scan: Go (govulncheck) ─────────────────────
+  deps-go:
+    name: "Deps: Go (govulncheck)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: router/go.sum
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        working-directory: router
+        run: govulncheck ./...
+
+  # ─── 6. Dependency Scan: JavaScript (npm audit) ───────────────
+  deps-js:
+    name: "Deps: JavaScript (npm audit)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        working-directory: dashboard
+        run: npm ci
+
+      - name: Run npm audit (production dependencies)
+        working-directory: dashboard
+        run: npm audit --omit=dev --audit-level=high
+
+  # ─── 7. Container Scanning (Trivy) ────────────────────────────
+  container-scan:
+    name: "Container: Trivy Scan"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backend
+            context: ./backend
+          - service: router
+            context: ./router
+          - service: dashboard
+            context: ./dashboard
+          - service: classifier
+            context: ./classifier
+          - service: cache-service
+            context: ./cache-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t "styx-${{ matrix.service }}:security-scan" \
+            "${{ matrix.context }}"
+        env:
+          NEXT_PUBLIC_API_URL: "http://localhost:8000"
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "styx-${{ matrix.service }}:security-scan"
+          format: "sarif"
+          output: "trivy-${{ matrix.service }}.sarif"
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+      - name: Upload Trivy SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-${{ matrix.service }}.sarif"
+          category: "trivy-${{ matrix.service }}"
+
+      - name: Trivy strict check (fail on CRITICAL)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "styx-${{ matrix.service }}:security-scan"
+          format: "table"
+          severity: "CRITICAL"
+          exit-code: "1"
+
+  # ─── 8. Secrets Detection (Gitleaks) ──────────────────────────
+  secrets-scan:
+    name: "Secrets: Gitleaks"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for scanning all commits
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── 9. Dockerfile Linting (Hadolint) ─────────────────────────
+  dockerfile-lint:
+    name: "Dockerfile: Hadolint"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint backend Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: backend/Dockerfile
+          ignore: DL3008,DL3018
+          failure-threshold: warning
+
+      - name: Lint router Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: router/Dockerfile
+          ignore: DL3008,DL3018
+          failure-threshold: warning
+
+      - name: Lint dashboard Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: dashboard/Dockerfile
+          ignore: DL3008,DL3018
+          failure-threshold: warning
+
+      - name: Lint classifier Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: classifier/Dockerfile
+          ignore: DL3008,DL3018
+          failure-threshold: warning
+
+      - name: Lint cache-service Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: cache-service/Dockerfile
+          ignore: DL3008,DL3018
+          failure-threshold: warning
+
+  # ─── 10. Security Summary ─────────────────────────────────────
+  security-summary:
+    name: "Security Summary"
+    runs-on: ubuntu-latest
+    needs:
+      - sast-python
+      - sast-go
+      - sast-typescript
+      - deps-python
+      - deps-go
+      - deps-js
+      - container-scan
+      - secrets-scan
+      - dockerfile-lint
+    if: always()
+    steps:
+      - name: Security pipeline result
+        env:
+          SAST_PYTHON: ${{ needs.sast-python.result }}
+          SAST_GO: ${{ needs.sast-go.result }}
+          SAST_TS: ${{ needs.sast-typescript.result }}
+          DEPS_PYTHON: ${{ needs.deps-python.result }}
+          DEPS_GO: ${{ needs.deps-go.result }}
+          DEPS_JS: ${{ needs.deps-js.result }}
+          CONTAINER: ${{ needs.container-scan.result }}
+          SECRETS: ${{ needs.secrets-scan.result }}
+          DOCKERFILE: ${{ needs.dockerfile-lint.result }}
+        run: |
+          echo "══════════════════════════════════════════"
+          echo "  Styx Security Pipeline — Summary"
+          echo "══════════════════════════════════════════"
+          echo ""
+          echo "SAST Python (Bandit):     $SAST_PYTHON"
+          echo "SAST Go (gosec):          $SAST_GO"
+          echo "SAST TypeScript (ESLint): $SAST_TS"
+          echo "Deps Python (pip-audit):  $DEPS_PYTHON"
+          echo "Deps Go (govulncheck):    $DEPS_GO"
+          echo "Deps JS (npm audit):      $DEPS_JS"
+          echo "Container (Trivy):        $CONTAINER"
+          echo "Secrets (Gitleaks):       $SECRETS"
+          echo "Dockerfile (Hadolint):    $DOCKERFILE"
+          echo ""
+
+          # Fail if any critical job failed
+          if [ "$SECRETS" = "failure" ]; then
+            echo "CRITICAL: Secrets detected in codebase!"
+            exit 1
+          fi
+
+          if [ "$SAST_PYTHON" = "failure" ] || [ "$SAST_GO" = "failure" ]; then
+            echo "HIGH: SAST found critical vulnerabilities"
+            exit 1
+          fi
+
+          echo "Security pipeline completed successfully."

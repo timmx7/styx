@@ -1,0 +1,89 @@
+---
+title: Create your account
+description: Sign up for Styx and get your API key in 2 minutes.
+---
+
+# Create your account
+
+This guide walks you through creating a Styx account and getting your first API key. It takes about 2 minutes.
+
+---
+
+## Step 1 --- Sign up
+
+1. Go to [app.styx.sh/register](https://app.styx.sh/register)
+2. Enter your **name**, **email**, and a **password**
+3. Click **Create account**
+
+> Your password must be at least 8 characters and include a number and a special character (like `#`, `!`, or `@`).
+
+You'll be redirected to the dashboard automatically.
+
+---
+
+## Step 2 --- Create a project
+
+A **project** is like a folder for your app. It keeps your API keys, usage stats, and settings organized.
+
+1. In the sidebar, click **Projects**
+2. Click **New Project**
+3. Give it a name (for example: `my-first-app`)
+4. Click **Create**
+
+> **Why projects?** If you have multiple apps (a chatbot, a content generator...), each one gets its own project. This way, you can see the costs and usage for each app separately.
+
+---
+
+## Step 3 --- Get your API key
+
+1. In the sidebar, click **API Keys**
+2. Click **Create Key**
+3. Select the project you just created
+4. Click **Generate**
+
+You'll see a key that looks like this:
+
+```
+sk-styx-abc123def456...
+```
+
+**Copy it now and save it somewhere safe.** You won't be able to see it again after you close this page.
+
+> **Where should I store my key?**
+> - On your computer: in a file called `.env` (never push this file to GitHub!)
+> - In production: use your hosting platform's "Environment Variables" or "Secrets" feature
+
+---
+
+## Step 4 --- Choose your billing mode
+
+Styx offers two billing modes:
+
+### Charon (Bring Your Own Keys)
+
+You already have API keys from OpenAI, Anthropic, etc. Styx uses **your keys** to make requests.
+
+- **You pay the providers directly** — zero markup from Styx
+- Styx charges based on request volume
+- Best if you already have provider accounts
+
+### Achilles (Managed)
+
+You don't have any provider keys. Styx handles everything.
+
+- **You buy credits** on Styx, and we pay the providers for you
+- Simpler to get started — no need to create accounts on OpenAI, Anthropic, etc.
+- Best for beginners or teams who want one single bill
+
+You can choose your billing mode in **Settings > Billing** on the dashboard.
+
+---
+
+## You're all set!
+
+You now have:
+- A Styx account
+- A project
+- An API key
+
+**Next step:** [Connect via MCP](/docs/mcp-server) (recommended) or [send your first REST API request](/docs/getting-started/first-request)

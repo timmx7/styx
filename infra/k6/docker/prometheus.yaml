@@ -1,0 +1,18 @@
+# Prometheus config pour k6 load testing
+# Le remote write receiver est active via --web.enable-remote-write-receiver
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # Scraper Prometheus lui-meme
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Scraper le router Styx (si accessible)
+  - job_name: "styx-router"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+    metrics_path: /metrics

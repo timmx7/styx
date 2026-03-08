@@ -1,0 +1,613 @@
+# ══════════════════════════════════════════════════════════════════════
+# Styx Helm Chart — Default Values (development / single-node)
+# ══════════════════════════════════════════════════════════════════════
+# Override per environment with:
+#   helm install styx . -f envs/production.yaml
+
+global:
+  # -- Container image registry (override for private registries)
+  imageRegistry: ""
+  # -- Pull secrets for private registries
+  imagePullSecrets: []
+  # -- Kubernetes namespace (chart uses Release.Namespace by default)
+  namespace: ""
+  # -- Common labels applied to every resource
+  labels: {}
+
+# ---------------------------------------------------------------------------
+# Secrets — all sensitive values. In production, use External Secrets or
+# Sealed Secrets; never commit real values.
+# ---------------------------------------------------------------------------
+secrets:
+  # -- JWT signing secret (min 32 chars)
+  # REQUIRED: Must be overridden in production. Generate with: openssl rand -base64 32
+  jwtSecret: ""
+  # -- Shared secret between Go router and Python backend
+  # REQUIRED: Must be overridden in production. Generate with: openssl rand -base64 32
+  internalSecret: ""
+  # -- HMAC secret for API key hashing
+  # REQUIRED: Must be overridden in production. Generate with: openssl rand -base64 32
+  apiKeyHmacSecret: ""
+  # -- Fernet key for at-rest encryption of BYOK provider keys
+  encryptionKey: ""
+  # -- Previous Fernet key for key rotation
+  encryptionKeyPrevious: ""
+  # -- AI provider API keys
+  openaiApiKey: ""
+  anthropicApiKey: ""
+  googleApiKey: ""
+  mistralApiKey: ""
+  # -- Stripe keys (optional — mock mode if empty)
+  stripeSecretKey: ""
+  stripeWebhookSecret: ""
+  # -- Redis password
+  # REQUIRED: Must be overridden in production. Generate with: openssl rand -base64 32
+  redisPassword: ""
+  # -- PostgreSQL password
+  # REQUIRED: Must be overridden in production. Generate with: openssl rand -base64 32
+  postgresPassword: ""
+
+# ---------------------------------------------------------------------------
+# Go Router — THE critical path (<10 ms overhead target)
+# ---------------------------------------------------------------------------
+router:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: styx/router
+    tag: ""           # defaults to .Chart.AppVersion
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 250m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  # -- Extra environment variables (map)
+  extraEnv: {}
+  # -- Pod disruption budget
+  pdb:
+    enabled: true
+    minAvailable: 1
+  # -- Readiness/liveness probes
+  probes:
+    readiness:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    liveness:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 10
+      periodSeconds: 30
+  # -- Node selector, tolerations, affinity
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  # -- Pod annotations (e.g. Prometheus scrape)
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+
+# ---------------------------------------------------------------------------
+# Python Backend (FastAPI) — business logic, auth, billing
+# ---------------------------------------------------------------------------
+backend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: styx/backend
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 75
+  extraEnv: {}
+  debug: false
+  corsOrigins: "http://localhost:3000,http://127.0.0.1:3000"
+  pdb:
+    enabled: true
+    minAvailable: 1
+  probes:
+    readiness:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    liveness:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 15
+      periodSeconds: 30
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+
+# ---------------------------------------------------------------------------
+# Database migration job (Alembic)
+# ---------------------------------------------------------------------------
+migration:
+  enabled: true
+  image:
+    repository: styx/backend
+    tag: ""
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  # -- Backoff limit for the Job
+  backoffLimit: 3
+
+# ---------------------------------------------------------------------------
+# Classifier — ML complexity classification
+# ---------------------------------------------------------------------------
+classifier:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: styx/classifier
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8001
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 80
+  extraEnv: {}
+  probes:
+    readiness:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 15
+      periodSeconds: 10
+    liveness:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 20
+      periodSeconds: 30
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+
+# ---------------------------------------------------------------------------
+# Cache Service — semantic cache with Qdrant
+# ---------------------------------------------------------------------------
+cacheService:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: styx/cache-service
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8002
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 75
+  # -- Semantic cache settings
+  embeddingModel: "all-MiniLM-L6-v2"
+  similarityThreshold: "0.95"
+  cacheTtlSeconds: "86400"
+  extraEnv: {}
+  probes:
+    readiness:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 20
+      periodSeconds: 10
+    liveness:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 30
+      periodSeconds: 30
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+
+# ---------------------------------------------------------------------------
+# Dashboard — Next.js 14 web UI
+# ---------------------------------------------------------------------------
+dashboard:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: styx/dashboard
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 80
+  # -- Public API URL visible to the browser
+  publicApiUrl: "http://localhost:8000"
+  extraEnv: {}
+  probes:
+    readiness:
+      httpGet:
+        path: /
+        port: http
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    liveness:
+      httpGet:
+        path: /
+        port: http
+      initialDelaySeconds: 15
+      periodSeconds: 30
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+
+# ---------------------------------------------------------------------------
+# PostgreSQL 16
+# ---------------------------------------------------------------------------
+postgresql:
+  enabled: true
+  # -- Set to false and provide externalUrl to use an external database
+  # externalUrl: "postgresql+asyncpg://user:pass@host:5432/styx"
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  auth:
+    database: styx
+    username: styx
+    # password comes from secrets.postgresPassword
+  service:
+    port: 5432
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""     # empty = default storage class
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ---------------------------------------------------------------------------
+# Redis 7
+# ---------------------------------------------------------------------------
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "7-alpine"
+    pullPolicy: IfNotPresent
+  service:
+    port: 6379
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ---------------------------------------------------------------------------
+# Qdrant (vector database)
+# ---------------------------------------------------------------------------
+qdrant:
+  enabled: true
+  image:
+    repository: qdrant/qdrant
+    tag: "v1.12.4"
+    pullPolicy: IfNotPresent
+  service:
+    httpPort: 6333
+    grpcPort: 6334
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ---------------------------------------------------------------------------
+# ClickHouse (analytics time-series)
+# ---------------------------------------------------------------------------
+clickhouse:
+  enabled: true
+  image:
+    repository: clickhouse/clickhouse-server
+    tag: "24.3-alpine"
+    pullPolicy: IfNotPresent
+  auth:
+    database: styx
+    username: styx
+  service:
+    httpPort: 8123
+    nativePort: 9000
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ---------------------------------------------------------------------------
+# Ingress
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    # nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+  hosts:
+    - host: api.styx.local
+      paths:
+        - path: /v1
+          pathType: Prefix
+          service: router
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: dashboard
+  tls: []
+  #  - secretName: styx-tls
+  #    hosts:
+  #      - api.styx.local
+
+# ---------------------------------------------------------------------------
+# Network Policies — restrict traffic between pods
+# ---------------------------------------------------------------------------
+networkPolicies:
+  enabled: true
+
+# ---------------------------------------------------------------------------
+# Service Monitor (Prometheus Operator)
+# ---------------------------------------------------------------------------
+serviceMonitor:
+  enabled: false
+  interval: 15s
+  labels: {}
+
+# ---------------------------------------------------------------------------
+# Monitoring — kube-prometheus-stack (Prometheus + Grafana + Alertmanager)
+# Set monitoring.enabled: true to deploy the full observability stack.
+# Grafana dashboards are auto-provisioned via ConfigMap sidecar.
+# ---------------------------------------------------------------------------
+monitoring:
+  enabled: false
+  # -- Install Grafana dashboards as ConfigMaps
+  dashboards:
+    enabled: true
+  # -- Install PrometheusRule alerting rules
+  alertingRules:
+    enabled: true
+  # -- kube-prometheus-stack overrides (only used when monitoring.enabled: true)
+  grafana:
+    enabled: true
+    adminUser: admin
+    adminPassword: styx
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: "1"
+        folderAnnotation: grafana_folder
+        provider:
+          foldersFromFilesStructure: true
+    persistence:
+      enabled: false
+    grafana.ini:
+      server:
+        root_url: "%(protocol)s://%(domain)s/grafana/"
+        serve_from_sub_path: true
+  prometheus:
+    prometheusSpec:
+      retention: 15d
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: "1"
+          memory: 2Gi
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 20Gi
+      serviceMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi
+  # Disable components not needed for Styx
+  kubeEtcd:
+    enabled: false
+  kubeScheduler:
+    enabled: false
+  kubeControllerManager:
+    enabled: false
+  kubeProxy:
+    enabled: false
+
+# ---------------------------------------------------------------------------
+# cert-manager + Let's Encrypt — automated TLS certificate management
+# Set certManager.enabled: true to deploy cert-manager and ClusterIssuers.
+# Alternatively, install cert-manager separately and only use the issuers.
+# ---------------------------------------------------------------------------
+certManager:
+  enabled: false
+  # -- Deploy ClusterIssuer resources (works even without the dependency)
+  clusterIssuers:
+    enabled: false
+    # -- Email for Let's Encrypt registration (REQUIRED for ACME)
+    email: ""
+    # -- Ingress class for HTTP-01 solver
+    ingressClass: nginx
+  # -- cert-manager sub-chart overrides (only when certManager.enabled: true)
+  installCRDs: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# Backup — PostgreSQL and Redis automated backups to S3
+# ---------------------------------------------------------------------------
+backup:
+  # -- Enable automated backups
+  enabled: false
+  # -- Cron schedule for PostgreSQL backups (default: daily at 2 AM UTC)
+  schedule: "0 2 * * *"
+  # -- Cron schedule for Redis backups (default: every 6 hours)
+  redisSchedule: "0 */6 * * *"
+  # -- S3 bucket for backup storage
+  s3Bucket: "styx-backups"
+  # -- AWS region for S3
+  awsRegion: "us-east-1"
+  # -- Retention period in days
+  retentionDays: 30
+  # -- Container image for backup job (needs pg_dump + awscli; non-alpine for date -d support)
+  image: "postgres:16"
+
+# ---------------------------------------------------------------------------
+# Observability — OpenTelemetry, tracing, and metrics
+# ---------------------------------------------------------------------------
+observability:
+  otel:
+    # -- Enable OpenTelemetry Collector deployment
+    enabled: false
+    # -- Collector image
+    image: "otel/opentelemetry-collector-contrib:0.96.0"
+    # -- Jaeger endpoint for trace export
+    jaegerEndpoint: "jaeger-collector:4317"
+
+# ---------------------------------------------------------------------------
+# External Secrets — Vault / AWS Secrets Manager integration
+# ---------------------------------------------------------------------------
+externalSecrets:
+  # -- Enable External Secrets Operator resources
+  enabled: false
+  # -- Provider: "aws" or "vault"
+  provider: "aws"
+  # -- Refresh interval for secret sync
+  refreshInterval: "1h"
+  # -- Key prefix in the secrets backend
+  prefix: "styx"
+  aws:
+    region: "us-east-1"
+  vault:
+    address: "https://vault.internal:8200"
+    path: "secret"
+    version: "v2"
+    role: "styx"

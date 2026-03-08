@@ -1,0 +1,72 @@
+{{- if .Values.classifier.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "styx.fullname" . }}-classifier
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "classifier") | nindent 4 }}
+spec:
+  {{- if not .Values.classifier.autoscaling.enabled }}
+  replicas: {{ .Values.classifier.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "styx.selectorLabels" (dict "root" . "component" "classifier") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.classifier.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "styx.componentLabels" (dict "root" . "component" "classifier") | nindent 8 }}
+    spec:
+      {{- include "styx.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "styx.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: classifier
+          image: {{ include "styx.image" (dict "root" . "image" .Values.classifier.image) }}
+          imagePullPolicy: {{ .Values.classifier.image.pullPolicy }}
+          securityContext:
+            {{- include "styx.securityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.classifier.service.port }}
+              protocol: TCP
+          env:
+            {{- range $key, $value := .Values.classifier.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+          {{- with .Values.classifier.probes.readiness }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.classifier.probes.liveness }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.classifier.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.classifier.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.classifier.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.classifier.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

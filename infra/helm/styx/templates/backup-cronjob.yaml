@@ -1,0 +1,130 @@
+{{- if .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "styx.fullname" . }}-pg-backup
+  labels:
+    {{- include "styx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-backup
+              image: {{ .Values.backup.image | default "postgres:16-alpine" }}
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+                  FILENAME="styx-${TIMESTAMP}.sql.gz"
+
+                  echo "Starting PostgreSQL backup..."
+                  pg_dump "$DATABASE_URL" | gzip > "/tmp/${FILENAME}"
+
+                  echo "Uploading to S3..."
+                  aws s3 cp "/tmp/${FILENAME}" \
+                    "s3://${S3_BUCKET}/postgres/${FILENAME}" \
+                    --storage-class STANDARD_IA
+
+                  # Clean up local file
+                  rm -f "/tmp/${FILENAME}"
+
+                  # Prune old backups using S3 lifecycle-compatible date math
+                  echo "Pruning backups older than {{ .Values.backup.retentionDays }} days..."
+                  CUTOFF_TS=$(($(date +%s) - {{ .Values.backup.retentionDays }} * 86400))
+                  aws s3 ls "s3://${S3_BUCKET}/postgres/" | \
+                    awk '{print $4}' | \
+                    while read file; do
+                      # Extract date: styx-YYYYMMDD-HHMMSS.sql.gz
+                      file_date=$(echo "$file" | sed -n 's/.*-\([0-9]\{8\}\)-.*/\1/p')
+                      if [ -n "$file_date" ]; then
+                        y=${file_date%????}; rest=${file_date#????}; m=${rest%??}; d=${rest#??}
+                        # Convert to epoch using POSIX date
+                        file_ts=$(date -u -d "${y}-${m}-${d}" +%s 2>/dev/null || echo "0")
+                        if [ "$file_ts" -lt "$CUTOFF_TS" ] 2>/dev/null; then
+                          aws s3 rm "s3://${S3_BUCKET}/postgres/${file}"
+                          echo "Pruned: ${file}"
+                        fi
+                      fi
+                    done
+
+                  echo "Backup complete: ${FILENAME}"
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "styx.fullname" . }}-secrets
+                      key: database-url
+                - name: S3_BUCKET
+                  value: {{ .Values.backup.s3Bucket | quote }}
+                - name: AWS_DEFAULT_REGION
+                  value: {{ .Values.backup.awsRegion | default "us-east-1" | quote }}
+              envFrom:
+                - secretRef:
+                    name: {{ include "styx.fullname" . }}-backup-aws
+                    optional: true
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+---
+# Redis backup (RDB snapshot → S3)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "styx.fullname" . }}-redis-backup
+  labels:
+    {{- include "styx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.backup.redisSchedule | default "0 */6 * * *" | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: redis-backup
+              image: redis:7-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+                  # Trigger RDB save
+                  redis-cli -h {{ include "styx.fullname" . }}-redis BGSAVE
+                  sleep 5
+
+                  echo "Redis backup triggered at ${TIMESTAMP}"
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+{{- end }}

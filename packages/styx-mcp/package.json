@@ -1,0 +1,35 @@
+{
+  "name": "styx-mcp",
+  "version": "0.1.0",
+  "description": "Styx MCP server — connect any AI tool to every model provider",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-gateway",
+    "openai",
+    "anthropic",
+    "claude",
+    "cursor",
+    "windsurf",
+    "llm",
+    "styx"
+  ],
+  "homepage": "https://styx.sh",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/styx-ai/styx-mcp-server"
+  },
+  "license": "MIT",
+  "author": "Styx AI <hello@styx.sh>",
+  "bin": {
+    "styx-mcp": "./bin/styx-mcp.js"
+  },
+  "files": [
+    "bin/",
+    "server.py",
+    "requirements.txt"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,25 @@
+{{/*
+══════════════════════════════════════════════════════════════════════
+ServiceMonitor (Prometheus Operator CRD) — scrape Go Router metrics.
+Requires the prometheus-operator to be installed in the cluster.
+══════════════════════════════════════════════════════════════════════
+*/}}
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "styx.fullname" . }}-router
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "router") | nindent 4 }}
+    {{- with .Values.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "styx.selectorLabels" (dict "root" . "component" "router") | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.serviceMonitor.interval }}
+{{- end }}

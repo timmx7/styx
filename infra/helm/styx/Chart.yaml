@@ -1,0 +1,35 @@
+apiVersion: v2
+name: styx
+description: >-
+  Styx — Intelligent AI API gateway.
+  Routes, caches, and optimises requests across OpenAI, Anthropic, Google and Mistral.
+type: application
+version: 0.1.0          # Chart version (bump on infra changes)
+appVersion: "0.1.0"      # Application version
+home: https://styx.ai
+sources:
+  - https://github.com/styx/styx
+maintainers:
+  - name: Styx Team
+    email: infra@styx.ai
+keywords:
+  - ai
+  - gateway
+  - proxy
+  - openai
+  - anthropic
+  - llm
+
+# Optional dependencies — enable individually
+dependencies:
+  - name: kube-prometheus-stack
+    version: "72.x"
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: monitoring.enabled
+    alias: monitoring
+
+  - name: cert-manager
+    version: "1.x"
+    repository: https://charts.jetstack.io
+    condition: certManager.enabled
+    alias: certManager

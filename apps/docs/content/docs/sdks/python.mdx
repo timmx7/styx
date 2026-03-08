@@ -1,0 +1,173 @@
+---
+title: Python SDK
+description: Use the OpenAI Python SDK with Styx as a drop-in replacement.
+---
+
+# Python SDK
+
+Styx is fully compatible with the official OpenAI Python SDK. Just change the `base_url` — no new package to learn.
+
+> **Prefer MCP?** If you're using Claude Desktop, Cursor, or Windsurf, you don't need the SDK at all. Check the [MCP Server guide](/docs/mcp-server) instead.
+
+> **New to Python?** Make sure you have Python 3.9 or later installed. Check with `python --version` in your terminal.
+
+---
+
+## Install
+
+```bash
+pip install openai
+```
+
+That's it. You use the standard OpenAI SDK — Styx works as a drop-in replacement.
+
+---
+
+## Basic usage
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-styx-your-key-here",
+    base_url="https://api.styx.sh/v1",
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "Explain quantum physics in one sentence."}
+    ],
+)
+
+print(response.choices[0].message.content)
+```
+
+### What's happening here?
+
+1. **`OpenAI(...)`** creates a connection to Styx using the standard OpenAI SDK.
+2. **`base_url`** points to Styx instead of OpenAI directly.
+3. **`client.chat.completions.create(...)`** sends your question to the AI model.
+4. **`response.choices[0].message.content`** contains the AI's answer as text.
+
+---
+
+## Use environment variables (recommended)
+
+Hardcoding your API key in your code is dangerous. Use an environment variable instead:
+
+### 1. Create a `.env` file in your project folder
+
+```
+STYX_API_KEY=sk-styx-your-key-here
+```
+
+### 2. Use it in your code
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ.get("STYX_API_KEY"),
+    base_url="https://api.styx.sh/v1",
+)
+```
+
+---
+
+## Switch models instantly
+
+The beauty of Styx: switch between any provider's models by changing one word:
+
+```python
+# Use OpenAI
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+# Use Anthropic — same code, different model name
+response = client.chat.completions.create(
+    model="claude-sonnet-4-20250514",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+# Use Google
+response = client.chat.completions.create(
+    model="gemini-2.0-flash",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
+
+No new SDKs, no new API keys, no code changes beyond the model name.
+
+---
+
+## Async usage
+
+If your app uses `async/await` (common with FastAPI, aiohttp, etc.), use the async client:
+
+```python
+import asyncio
+from openai import AsyncOpenAI
+
+async def main():
+    client = AsyncOpenAI(
+        api_key="sk-styx-your-key-here",
+        base_url="https://api.styx.sh/v1",
+    )
+
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello!"}],
+    )
+
+    print(response.choices[0].message.content)
+
+asyncio.run(main())
+```
+
+---
+
+## Streaming responses
+
+For long answers, get the response word by word instead of waiting for the full text:
+
+```python
+stream = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a short poem."}],
+    stream=True,
+)
+
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="")
+```
+
+This is how ChatGPT shows text appearing gradually.
+
+---
+
+## Custom headers
+
+You can pass extra information to Styx using HTTP headers:
+
+| Header | Description |
+|---|---|
+| `X-Styx-Project-Id` | Tag this request with a project |
+| `X-Styx-End-User-Id` | Tag this request with an end user |
+| `X-Styx-Target-Provider` | Force a specific provider (`openai`, `anthropic`, `google`) |
+| `X-Styx-Routing-Strategy` | Override routing (`cost`, `latency`, `quality`) |
+
+---
+
+## Common errors
+
+| Error | What it means | How to fix it |
+|---|---|---|
+| `AuthenticationError` | Your API key is invalid | Check your key in the dashboard |
+| `RateLimitError` | Too many requests per minute | Wait a moment, then retry |
+| `APIConnectionError` | Can't reach Styx servers | Check your internet connection |
+| `BadRequestError` | Something wrong with your request | Check the model name and message format |

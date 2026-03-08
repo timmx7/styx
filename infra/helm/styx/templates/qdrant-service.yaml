@@ -1,0 +1,22 @@
+{{- if .Values.qdrant.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "styx.fullname" . }}-qdrant
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "qdrant") | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: http
+      port: {{ .Values.qdrant.service.httpPort }}
+      targetPort: http
+      protocol: TCP
+    - name: grpc
+      port: {{ .Values.qdrant.service.grpcPort }}
+      targetPort: grpc
+      protocol: TCP
+  selector:
+    {{- include "styx.selectorLabels" (dict "root" . "component" "qdrant") | nindent 4 }}
+{{- end }}

@@ -1,0 +1,38 @@
+══════════════════════════════════════════════════════════════════════
+  Styx {{ .Chart.AppVersion }} deployed!
+══════════════════════════════════════════════════════════════════════
+
+{{- if .Values.ingress.enabled }}
+Your Styx instance is available at:
+{{- range .Values.ingress.hosts }}
+  - https://{{ .host }}
+{{- end }}
+
+  AI API Gateway : https://{{ (index .Values.ingress.hosts 0).host }}/v1/chat/completions
+  Dashboard      : https://{{ (index .Values.ingress.hosts 0).host }}/
+  Backend API    : https://{{ (index .Values.ingress.hosts 0).host }}/api/
+{{- else }}
+
+To access Styx, set up port-forwards:
+
+  # AI API Gateway (drop-in OpenAI replacement)
+  kubectl port-forward svc/{{ include "styx.fullname" . }}-router {{ .Values.router.service.port }}:{{ .Values.router.service.port }}
+
+  # Dashboard
+  kubectl port-forward svc/{{ include "styx.fullname" . }}-dashboard {{ .Values.dashboard.service.port }}:{{ .Values.dashboard.service.port }}
+
+  # Backend API
+  kubectl port-forward svc/{{ include "styx.fullname" . }}-backend {{ .Values.backend.service.port }}:{{ .Values.backend.service.port }}
+
+Then:
+  - Dashboard  → http://localhost:{{ .Values.dashboard.service.port }}
+  - API calls  → http://localhost:{{ .Values.router.service.port }}/v1/chat/completions
+{{- end }}
+
+Quick test:
+  curl http://localhost:{{ .Values.router.service.port }}/health
+
+To check all pods:
+  kubectl get pods -l app.kubernetes.io/part-of=styx
+
+══════════════════════════════════════════════════════════════════════

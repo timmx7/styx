@@ -1,0 +1,177 @@
+# Styx — The MCP-Native AI Gateway
+
+> Connect any AI tool to every model provider through the Model Context Protocol.
+
+## What is Styx?
+
+Styx is the first AI gateway built for MCP (Model Context Protocol). It lets AI tools like Claude Desktop, Cursor, and Windsurf access every model provider — OpenAI, Anthropic, Google, Mistral — through a single MCP connection. No code changes, no multiple API keys, no vendor lock-in.
+
+Styx also works as an OpenAI-compatible REST API gateway for programmatic access.
+
+## Quick Start
+
+### MCP (recommended)
+
+Install the Styx MCP server:
+
+```bash
+npx styx-mcp --api-key $STYX_API_KEY
+```
+
+Or via pip:
+
+```bash
+pip install styx-gateway
+styx-mcp --api-key $STYX_API_KEY
+```
+
+Add to claude_desktop_config.json:
+
+```json
+{
+  "mcpServers": {
+    "styx": {
+      "command": "npx",
+      "args": ["styx-mcp"],
+      "env": {
+        "STYX_API_KEY": "sk-styx-xxx",
+        "STYX_TOKEN": "your-jwt-token"
+      }
+    }
+  }
+}
+```
+
+### REST API
+
+Use any OpenAI SDK — just change the base URL:
+
+Python:
+```python
+from openai import OpenAI
+client = OpenAI(api_key="sk-styx-xxx", base_url="https://api.styx.sh/v1")
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+Node.js:
+```javascript
+import OpenAI from "openai";
+const client = new OpenAI({ apiKey: "sk-styx-xxx", baseURL: "https://api.styx.sh/v1" });
+const response = await client.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: "Hello!" }]
+});
+```
+
+## MCP Tools
+
+When connected via MCP, Styx exposes 9 tools:
+
+| Tool | Description |
+|------|-------------|
+| styx_send_request | Send chat completions through the gateway |
+| styx_list_models | List all available AI models with pricing |
+| styx_switch_model | Set a default model for the session |
+| styx_list_projects | List all projects |
+| styx_create_project | Create a new project |
+| styx_list_api_keys | List API keys (prefixes only) |
+| styx_create_api_key | Create a new API key |
+| styx_check_usage | Get usage statistics |
+| styx_manage_providers | Manage BYOK provider keys |
+
+## Supported Models
+
+Styx supports models from these providers:
+
+- OpenAI: gpt-4o, gpt-4o-mini, gpt-4-turbo, o1-preview, o1-mini
+- Anthropic: claude-sonnet-4-20250514, claude-3-5-haiku-20241022, claude-3-opus
+- Google: gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash
+- Mistral: mistral-large-latest, mistral-medium, mistral-small
+
+Switch between any model by changing one parameter. No new API keys needed.
+
+## Billing Modes
+
+### Charon (BYOK — Bring Your Own Keys)
+Use your own provider API keys. Zero markup. Styx charges for request volume only.
+
+| Plan | Price | Requests/month |
+|------|-------|----------------|
+| Shade | Free | 10,000 |
+| Obol | $29/mo | 100,000 |
+| Ferryman | $99/mo | 1,000,000 |
+| Titan | $499/mo | Unlimited |
+
+### Achilles (Managed)
+Buy credits. Styx handles all provider keys and billing.
+
+| Plan | Price | Credits/month |
+|------|-------|---------------|
+| Spark | $10/mo | 10,000 |
+| Blaze | $50/mo | 60,000 |
+| Inferno | $200/mo | 300,000 |
+
+## Key Features
+
+### MCP Native
+First AI gateway built for the Model Context Protocol. Your tools discover capabilities automatically — no integration code needed.
+
+### Multi-Provider Access
+Access OpenAI, Anthropic, Google, and Mistral through a single API key. Switch models by changing one parameter.
+
+### Semantic Caching
+Vector-based semantic cache recognizes similar queries and returns cached responses instantly. Saves up to 80% on API costs.
+
+### Automatic Failover
+Circuit breaker pattern with health monitoring. If one provider goes down, Styx automatically routes to the next available provider. Zero downtime.
+
+### BYOK (Bring Your Own Keys)
+Use your existing provider API keys through Styx. Zero markup — you pay providers directly at their published rates.
+
+### Real-Time Analytics
+Dashboard with request volumes, cost tracking, latency percentiles, provider distribution, and per-model breakdowns.
+
+## Architecture
+
+```
+Client/MCP Tool -> Styx Gateway -> Provider (OpenAI/Anthropic/Google/Mistral)
+                       |
+                  Features:
+                  - API key validation
+                  - Semantic cache check
+                  - Smart routing
+                  - Cost tracking
+                  - Request logging
+                  - Automatic fallover
+```
+
+## Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| STYX_API_KEY | For requests | — | API key (starts with sk-styx-) |
+| STYX_TOKEN | For management | — | JWT auth token |
+| STYX_API_URL | No | https://api.styx.sh | Backend API URL |
+| STYX_PROXY_URL | No | https://proxy.styx.sh | Proxy URL |
+
+## Compatible AI Tools
+
+- Claude Desktop (Anthropic)
+- Claude Code (CLI)
+- Cursor (AI code editor)
+- Windsurf (AI code editor)
+- Continue (open-source AI assistant)
+- Any MCP-compatible tool
+
+## Links
+
+- Website: https://styx.sh
+- Dashboard: https://app.styx.sh
+- Documentation: https://docs.styx.sh
+- MCP Server docs: https://docs.styx.sh/docs/mcp-server
+- GitHub: https://github.com/styx-ai/styx-mcp-server
+- npm: https://www.npmjs.com/package/styx-mcp
+- PyPI: https://pypi.org/project/styx-gateway/

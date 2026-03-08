@@ -1,0 +1,126 @@
+# ══════════════════════════════════════════════════════════════════════
+# Styx Python SDK — Test, Build & Publish to PyPI
+# ══════════════════════════════════════════════════════════════════════
+#
+# NOTE: This workflow does NOT use any user-controlled inputs in run: blocks.
+# All dynamic values are passed via env: to prevent injection attacks.
+#
+# Triggers:
+#   - Push/PR to main touching sdk/python/** → test only
+#   - Tag v*.*.* → test + build + publish to PyPI
+#   - Manual dispatch → test + optional publish
+#
+# Uses PyPI Trusted Publishers (OIDC) — no API tokens needed.
+
+name: SDK Python
+
+on:
+  push:
+    branches: [main]
+    paths: ["sdk/python/**"]
+    tags: ["v*.*.*"]
+  pull_request:
+    paths: ["sdk/python/**"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to PyPI"
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    working-directory: sdk/python
+
+jobs:
+  # ── 1. Test across Python versions ──────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run tests
+        run: python -m pytest tests/ -v --tb=short
+
+      - name: Type check
+        run: python -m mypy styx/ --ignore-missing-imports
+        continue-on-error: true
+
+      - name: Lint
+        run: python -m ruff check styx/ tests/
+
+  # ── 2. Build the package ────────────────────────────────────────────
+  build:
+    name: Build sdist and wheel
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      GIT_REF: ${{ github.ref }}
+      PUBLISH_INPUT: ${{ github.event.inputs.publish }}
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: python -m pip install --upgrade pip build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Verify package
+        run: python -m twine check dist/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-dist
+          path: sdk/python/dist/
+          retention-days: 5
+
+  # ── 3. Publish to PyPI (Trusted Publisher OIDC) ─────────────────────
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish == 'true'
+
+    permissions:
+      id-token: write
+
+    environment:
+      name: pypi
+      url: https://pypi.org/project/styx-sdk/
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sdk-dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

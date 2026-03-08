@@ -1,0 +1,156 @@
+---
+title: Welcome to Styx
+description: Connect any AI tool to every model provider in under 2 minutes.
+---
+
+# Welcome to Styx
+
+Styx is the **MCP-native AI gateway**. It lets your AI tools — Claude Desktop, Cursor, Windsurf — access every model provider (OpenAI, Anthropic, Google, Mistral) through a single connection. No code changes, no multiple API keys, no vendor lock-in.
+
+## Two ways to connect
+
+### Option 1: MCP (recommended)
+
+MCP (Model Context Protocol) is an open standard that lets AI tools connect to external services. With Styx's MCP server, your tools discover models, switch providers, and send requests automatically.
+
+```bash
+npx styx-mcp --api-key $STYX_API_KEY
+```
+
+That's one command. Your AI tool now has access to every model.
+
+### Option 2: REST API
+
+Already using the OpenAI SDK? Change one line — your base URL:
+
+```
+Before:  api.openai.com/v1     +  your OpenAI key
+After:   api.styx.sh/v1        +  your Styx key
+```
+
+Your existing code works instantly with every provider.
+
+---
+
+## Why Styx?
+
+| Without Styx | With Styx |
+|---|---|
+| You manage one API key per provider | One single API key for everything |
+| If OpenAI goes down, your app crashes | Automatic failover to another provider |
+| You pay full price for every request | Semantic caching saves up to 80% |
+| No visibility on costs or usage | Real-time dashboard with charts and alerts |
+| Switching models requires code changes | Switch models with natural language via MCP |
+
+---
+
+## Quick Start (2 minutes)
+
+### Step 1 --- Create your account
+
+Go to [app.styx.sh](https://app.styx.sh) and create a free account. No credit card needed.
+
+### Step 2 --- Get your API key
+
+Go to **API Keys** in the sidebar and click **Create Key**. Copy the key that starts with `sk-styx-`.
+
+### Step 3 --- Connect
+
+<Tabs items={["MCP (recommended)", "Python", "Node.js", "cURL"]}>
+
+<Tab value="MCP (recommended)">
+
+Install the Styx MCP server and connect your AI tool:
+
+```bash
+npx styx-mcp --api-key sk-styx-your-key-here
+```
+
+Then add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "styx": {
+      "command": "npx",
+      "args": ["styx-mcp"],
+      "env": {
+        "STYX_API_KEY": "sk-styx-your-key-here"
+      }
+    }
+  }
+}
+```
+
+Restart your AI tool. Ask it: *"What models are available on Styx?"*
+
+</Tab>
+
+<Tab value="Python">
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-styx-your-key-here",
+    base_url="https://api.styx.sh/v1",
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Say hello!"}],
+)
+
+print(response.choices[0].message.content)
+```
+
+</Tab>
+
+<Tab value="Node.js">
+
+```js
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "sk-styx-your-key-here",
+  baseURL: "https://api.styx.sh/v1",
+});
+
+const response = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Say hello!" }],
+});
+
+console.log(response.choices[0].message.content);
+```
+
+</Tab>
+
+<Tab value="cURL">
+
+```bash
+curl https://api.styx.sh/v1/chat/completions \
+  -H "Authorization: Bearer sk-styx-your-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [{"role": "user", "content": "Say hello!"}]
+  }'
+```
+
+</Tab>
+
+</Tabs>
+
+---
+
+## What's next?
+
+<Cards>
+  <Card title="MCP Server" href="/docs/mcp-server" description="Connect Claude Desktop, Cursor, Windsurf, and any MCP client to Styx." />
+  <Card title="Create your account" href="/docs/getting-started/create-account" description="Step-by-step guide to sign up and set up your first project." />
+  <Card title="Understand the basics" href="/docs/concepts" description="What is MCP? How does caching work? How does routing work?" />
+  <Card title="Python SDK" href="/docs/sdks/python" description="Use the OpenAI SDK with Styx as a drop-in replacement." />
+  <Card title="Node.js SDK" href="/docs/sdks/node" description="Use the OpenAI SDK with Styx for JavaScript/TypeScript." />
+  <Card title="Explore the dashboard" href="/docs/dashboard" description="See your usage, costs, and performance in real time." />
+</Cards>

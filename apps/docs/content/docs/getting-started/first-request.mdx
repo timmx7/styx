@@ -1,0 +1,199 @@
+---
+title: Send your first request
+description: Make your first AI request through Styx in under 3 minutes.
+---
+
+# Send your first request
+
+You have your API key (it starts with `sk-styx-`). Now let's use it to talk to an AI model.
+
+> **Don't have an API key yet?** Go back to [Create your account](/docs/getting-started/create-account) first.
+
+> **Prefer MCP?** If you're using Claude Desktop, Cursor, or Windsurf, check out the [MCP Server guide](/docs/mcp-server) — no code needed.
+
+---
+
+## The idea in 30 seconds
+
+Styx is OpenAI SDK-compatible. To use it, you just change the base URL:
+
+```
+Before:  api.openai.com/v1     +  your OpenAI key
+After:   api.styx.sh/v1        +  your Styx key  <- that's it
+```
+
+---
+
+## Choose your language
+
+<Tabs items={["Python", "Node.js", "cURL (any language)"]}>
+
+<Tab value="Python">
+
+### 1. Install the OpenAI package
+
+Open your terminal and run:
+
+```bash
+pip install openai
+```
+
+### 2. Create a file
+
+Create a new file called `test.py` and paste this code:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-styx-your-key-here",          # Replace with your real key
+    base_url="https://api.styx.sh/v1",        # This line is the magic
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "What is the capital of France?"}
+    ],
+)
+
+# Print the AI's answer
+print(response.choices[0].message.content)
+```
+
+### 3. Run it
+
+```bash
+python test.py
+```
+
+You should see something like:
+
+```
+The capital of France is Paris.
+```
+
+</Tab>
+
+<Tab value="Node.js">
+
+### 1. Set up a project
+
+Open your terminal and run:
+
+```bash
+mkdir my-first-app && cd my-first-app
+npm init -y
+npm install openai
+```
+
+### 2. Create a file
+
+Create a new file called `test.mjs` and paste this code:
+
+```js
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "sk-styx-your-key-here",           // Replace with your real key
+  baseURL: "https://api.styx.sh/v1",        // This line is the magic
+});
+
+const response = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [
+    { role: "user", content: "What is the capital of France?" }
+  ],
+});
+
+// Print the AI's answer
+console.log(response.choices[0].message.content);
+```
+
+### 3. Run it
+
+```bash
+node test.mjs
+```
+
+You should see something like:
+
+```
+The capital of France is Paris.
+```
+
+</Tab>
+
+<Tab value="cURL (any language)">
+
+### Run this in your terminal
+
+No installation needed. Just copy-paste this command:
+
+```bash
+curl https://api.styx.sh/v1/chat/completions \
+  -H "Authorization: Bearer sk-styx-your-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [
+      {"role": "user", "content": "What is the capital of France?"}
+    ]
+  }'
+```
+
+> Replace `sk-styx-your-key-here` with your actual API key.
+
+You'll get a JSON response with the AI's answer inside `choices[0].message.content`.
+
+</Tab>
+
+</Tabs>
+
+---
+
+## Try a different model
+
+The beauty of Styx: switch models by changing one word. No new accounts, no new keys.
+
+| Model | Provider | Best for |
+|---|---|---|
+| `gpt-4o` | OpenAI | General tasks, great quality |
+| `gpt-4o-mini` | OpenAI | Fast and cheap, good for simple tasks |
+| `claude-sonnet-4-20250514` | Anthropic | Long texts, careful analysis |
+| `gemini-2.0-flash` | Google | Very fast, good for real-time apps |
+| `mistral-large-latest` | Mistral | European provider, strong reasoning |
+
+Just change the `model` field in your code:
+
+```python
+response = client.chat.completions.create(
+    model="claude-sonnet-4-20250514",  # <- Changed from gpt-4o to Claude
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
+
+> **Using MCP?** You can switch models with natural language: *"Switch to Claude Sonnet"* — no code changes needed.
+
+---
+
+## Something not working?
+
+| Problem | Solution |
+|---|---|
+| `401 Unauthorized` | Your API key is wrong or expired. Check it in the dashboard. |
+| `429 Too Many Requests` | You've hit your rate limit. Wait a minute and try again. |
+| `Connection refused` | Check the URL. It should be `https://api.styx.sh/v1` (with the `s` in `https`). |
+| `Model not found` | Check the model name for typos. See the table above for exact names. |
+
+**Still stuck?** Check the [dashboard](https://app.styx.sh) logs --- every request is recorded with its status and error details.
+
+---
+
+## What's next?
+
+- **[Connect via MCP](/docs/mcp-server)** --- The recommended way to use Styx with AI tools
+- **[Understand the concepts](/docs/concepts)** --- Learn what MCP, caching, routing, and fallback mean
+- **[Python SDK](/docs/sdks/python)** --- Use the OpenAI SDK as a drop-in replacement
+- **[Node.js SDK](/docs/sdks/node)** --- Same approach for JavaScript/TypeScript
+- **[Explore the dashboard](/docs/dashboard)** --- See your usage, costs, and request logs

@@ -1,0 +1,134 @@
+{{/*
+══════════════════════════════════════════════════════════════════════
+Horizontal Pod Autoscalers — one per scalable service.
+Enabled per-service in values (e.g. router.autoscaling.enabled: true).
+══════════════════════════════════════════════════════════════════════
+*/}}
+
+{{- if and .Values.router.enabled .Values.router.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "styx.fullname" . }}-router
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "router") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "styx.fullname" . }}-router
+  minReplicas: {{ .Values.router.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.router.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.router.autoscaling.targetCPUUtilizationPercentage }}
+    {{- if .Values.router.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.router.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+
+{{- if and .Values.backend.enabled .Values.backend.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "styx.fullname" . }}-backend
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "backend") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "styx.fullname" . }}-backend
+  minReplicas: {{ .Values.backend.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+
+{{- if and .Values.classifier.enabled .Values.classifier.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "styx.fullname" . }}-classifier
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "classifier") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "styx.fullname" . }}-classifier
+  minReplicas: {{ .Values.classifier.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.classifier.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.classifier.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+
+{{- if and .Values.cacheService.enabled .Values.cacheService.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "styx.fullname" . }}-cache-service
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "cache-service") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "styx.fullname" . }}-cache-service
+  minReplicas: {{ .Values.cacheService.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.cacheService.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.cacheService.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+
+{{- if and .Values.dashboard.enabled .Values.dashboard.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "styx.fullname" . }}-dashboard
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "dashboard") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "styx.fullname" . }}-dashboard
+  minReplicas: {{ .Values.dashboard.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.dashboard.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.dashboard.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

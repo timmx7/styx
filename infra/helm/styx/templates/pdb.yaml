@@ -1,0 +1,36 @@
+{{/*
+══════════════════════════════════════════════════════════════════════
+Pod Disruption Budgets — ensure availability during node drains.
+Only created for services with pdb.enabled: true AND replicas > 1.
+══════════════════════════════════════════════════════════════════════
+*/}}
+
+{{- if and .Values.router.enabled .Values.router.pdb.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "styx.fullname" . }}-router
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "router") | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.router.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "styx.selectorLabels" (dict "root" . "component" "router") | nindent 6 }}
+{{- end }}
+
+{{- if and .Values.backend.enabled .Values.backend.pdb.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "styx.fullname" . }}-backend
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "backend") | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.backend.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "styx.selectorLabels" (dict "root" . "component" "backend") | nindent 6 }}
+{{- end }}

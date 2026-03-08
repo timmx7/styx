@@ -1,0 +1,86 @@
+{{- if .Values.cacheService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "styx.fullname" . }}-cache-service
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "cache-service") | nindent 4 }}
+spec:
+  {{- if not .Values.cacheService.autoscaling.enabled }}
+  replicas: {{ .Values.cacheService.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "styx.selectorLabels" (dict "root" . "component" "cache-service") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.cacheService.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "styx.componentLabels" (dict "root" . "component" "cache-service") | nindent 8 }}
+    spec:
+      {{- include "styx.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "styx.podSecurityContext" . | nindent 8 }}
+      initContainers:
+        {{- if .Values.qdrant.enabled }}
+        - name: wait-for-qdrant
+          image: busybox:1.36
+          command: ['sh', '-c', 'until wget -q -O- http://{{ include "styx.fullname" . }}-qdrant:{{ .Values.qdrant.service.httpPort }}/readyz; do echo "Waiting for Qdrant..."; sleep 3; done']
+        {{- end }}
+      containers:
+        - name: cache-service
+          image: {{ include "styx.image" (dict "root" . "image" .Values.cacheService.image) }}
+          imagePullPolicy: {{ .Values.cacheService.image.pullPolicy }}
+          securityContext:
+            {{- include "styx.securityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.cacheService.service.port }}
+              protocol: TCP
+          env:
+            - name: QDRANT_URL
+              value: {{ include "styx.qdrantUrl" . | quote }}
+            - name: EMBEDDING_MODEL
+              value: {{ .Values.cacheService.embeddingModel | quote }}
+            - name: CACHE_SIMILARITY_THRESHOLD
+              value: {{ .Values.cacheService.similarityThreshold | quote }}
+            - name: CACHE_TTL_SECONDS
+              value: {{ .Values.cacheService.cacheTtlSeconds | quote }}
+            {{- range $key, $value := .Values.cacheService.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+          {{- with .Values.cacheService.probes.readiness }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.cacheService.probes.liveness }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.cacheService.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.cacheService.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cacheService.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cacheService.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

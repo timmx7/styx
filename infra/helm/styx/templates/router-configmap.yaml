@@ -1,0 +1,93 @@
+{{- if .Values.router.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "styx.routerConfigMapName" . }}
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "router") | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: {{ .Values.router.service.port }}
+      read_timeout_seconds: 30
+      write_timeout_seconds: 120
+
+    backend:
+      url: {{ include "styx.backendUrl" . | quote }}
+
+    classifier:
+      url: {{ include "styx.classifierUrl" . | quote }}
+
+    cache:
+      url: {{ include "styx.cacheServiceUrl" . | quote }}
+      enabled: {{ .Values.cacheService.enabled }}
+
+    fallback:
+      circuit_breaker_max_failures: 5
+      circuit_breaker_recovery_seconds: 30
+      health_check_interval_seconds: 15
+
+    providers:
+      openai:
+        name: "openai"
+        base_url: "https://api.openai.com"
+        api_key_env: "OPENAI_API_KEY"
+        auth_header: "Authorization"
+        auth_prefix: "Bearer "
+        models:
+          - name: "gpt-4o"
+            input_cost_per_1k: 0.25
+            output_cost_per_1k: 1.0
+            tier: "heavy"
+          - name: "gpt-4o-mini"
+            input_cost_per_1k: 0.015
+            output_cost_per_1k: 0.06
+            tier: "light"
+
+      anthropic:
+        name: "anthropic"
+        base_url: "https://api.anthropic.com"
+        api_key_env: "ANTHROPIC_API_KEY"
+        auth_header: "x-api-key"
+        auth_prefix: ""
+        models:
+          - name: "claude-sonnet-4-20250514"
+            input_cost_per_1k: 0.3
+            output_cost_per_1k: 1.5
+            tier: "heavy"
+          - name: "claude-3-haiku-20240307"
+            input_cost_per_1k: 0.025
+            output_cost_per_1k: 0.125
+            tier: "light"
+
+      google:
+        name: "google"
+        base_url: "https://generativelanguage.googleapis.com"
+        api_key_env: "GOOGLE_API_KEY"
+        models:
+          - name: "gemini-1.5-pro"
+            input_cost_per_1k: 0.125
+            output_cost_per_1k: 0.5
+            tier: "medium"
+          - name: "gemini-1.5-flash"
+            input_cost_per_1k: 0.0075
+            output_cost_per_1k: 0.03
+            tier: "light"
+
+      mistral:
+        name: "mistral"
+        base_url: "https://api.mistral.ai"
+        api_key_env: "MISTRAL_API_KEY"
+        models:
+          - name: "mistral-large-latest"
+            input_cost_per_1k: 0.2
+            output_cost_per_1k: 0.6
+            tier: "heavy"
+          - name: "mistral-small-latest"
+            input_cost_per_1k: 0.02
+            output_cost_per_1k: 0.06
+            tier: "light"
+
+    logging:
+      level: "info"
+{{- end }}

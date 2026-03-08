@@ -1,0 +1,86 @@
+# ============================================================================
+# Docker Compose — k6 + Prometheus + Grafana
+#
+# Stack complete pour executer les load tests avec visualisation en temps reel.
+# k6 pousse les metriques vers Prometheus via Remote Write,
+# et Grafana affiche tout dans un dashboard pre-configure.
+#
+# Usage :
+#   docker compose -f docker-compose.k6.yaml up -d prometheus grafana
+#   docker compose -f docker-compose.k6.yaml run --rm k6 run /scripts/scenarios/smoke-and-load.js
+#
+# Acces :
+#   Grafana    → http://localhost:3000 (admin/admin)
+#   Prometheus → http://localhost:9090
+# ============================================================================
+
+services:
+  # -------------------------------------------------------------------------
+  # k6 — load test runner avec output Prometheus
+  # -------------------------------------------------------------------------
+  k6:
+    image: grafana/k6:latest
+    volumes:
+      - ./:/scripts:ro
+      - ./results:/results
+    environment:
+      - BASE_URL=${BASE_URL:-http://host.docker.internal:8080}
+      - API_KEY=${API_KEY:-sk_styx_test_key_for_load_testing}
+      - K6_DEBUG=${K6_DEBUG:-false}
+      - K6_PROMETHEUS_RW_SERVER_URL=http://prometheus:9090/api/v1/write
+      - K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    working_dir: /scripts
+    networks:
+      - k6-net
+    depends_on:
+      - prometheus
+
+  # -------------------------------------------------------------------------
+  # Prometheus — collecte les metriques k6
+  # -------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-remote-write-receiver"
+      - "--web.enable-lifecycle"
+    networks:
+      - k6-net
+
+  # -------------------------------------------------------------------------
+  # Grafana — visualisation des resultats
+  # -------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.3.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks:
+      - k6-net
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  k6-net:
+    driver: bridge

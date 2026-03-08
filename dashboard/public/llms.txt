@@ -1,0 +1,78 @@
+# Styx — The MCP-Native AI Gateway
+
+> Route requests to any AI provider through one universal endpoint. Self-hosted. Open source. BYOK.
+
+Styx is an open-source AI gateway and MCP server that sits between your app and AI providers. Send requests to OpenAI, Anthropic, Google, or Mistral through a single OpenAI-compatible endpoint. Bring your own API keys, self-host on your infrastructure, and get full visibility into every request. Apache 2.0 licensed.
+
+## Quick Start
+
+Self-host in 5 minutes:
+```
+git clone https://github.com/timmx7/styx.git
+cd styx
+cp .env.example .env
+docker compose up -d
+```
+
+Or use the REST API (OpenAI SDK compatible):
+```python
+from openai import OpenAI
+client = OpenAI(api_key="your-styx-key", base_url="http://localhost:8080/v1")
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello from Styx!"}]
+)
+```
+
+## MCP Integration
+
+Connect Claude Code:
+```
+claude mcp add styx -- npx styx-mcp
+```
+
+Connect Cursor (add to .cursor/mcp.json):
+```json
+{
+  "styx": {
+    "command": "npx",
+    "args": ["styx-mcp"],
+    "env": { "STYX_API_KEY": "your-key" }
+  }
+}
+```
+
+## Key Features
+
+- MCP-native: first AI gateway built for the Model Context Protocol
+- Multi-provider: OpenAI, Anthropic, Google, Mistral through one endpoint
+- BYOK: bring your own API keys, encrypted at rest with Fernet (AES)
+- Semantic caching: vector similarity search avoids paying twice for similar queries
+- Smart routing: ML classifier routes requests to the optimal model
+- Automatic failover: circuit breaker with zero-downtime provider switching
+- Dashboard: track requests, costs, latency per project and model
+- Billing: built-in Stripe subscription and credit-based billing
+- Self-hosted: Docker Compose, full control over your data
+- Secure: HMAC key hashing, rate limiting, TLS, HSTS, CSP
+
+## Supported Providers
+
+- OpenAI: GPT-4o, GPT-4o-mini, o1, o3
+- Anthropic: Claude Opus 4, Claude Sonnet 4, Claude 3.5
+- Google: Gemini 2.0 Flash, Gemini 1.5 Pro
+- Mistral: Mistral Large, Mistral Small
+
+## Architecture
+
+- Go reverse proxy (router) — <10ms overhead, circuit breakers, health checks
+- Python FastAPI backend — auth, billing, business logic
+- Next.js dashboard — real-time analytics, project management
+- PostgreSQL, Redis, ClickHouse, Qdrant — data layer
+
+## Links
+
+- GitHub: https://github.com/timmx7/styx
+- Website: https://styx.app
+- Dashboard: http://localhost:3000 (self-hosted)
+- API Gateway: http://localhost:8080 (self-hosted)
+- License: Apache 2.0

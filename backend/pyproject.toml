@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+timeout = 15
+filterwarnings = [
+    "ignore:datetime.datetime.utcnow\\(\\) is deprecated:DeprecationWarning:jose.jwt",
+]
+
+[tool.ruff.lint]
+ignore = ["E402"]

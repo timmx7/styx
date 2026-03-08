@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ── Cream editorial theme — Styx dashboard ── */
+  /* Palette: warm cream bg, subtle borders, blue accent #1400FF */
+
+  :root {
+    --background: 30 33% 94%;
+    --foreground: 0 0% 10%;
+    --card: 30 30% 97%;
+    --card-foreground: 0 0% 10%;
+    --popover: 30 30% 97%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 245 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 18% 90%;
+    --secondary-foreground: 20 5% 40%;
+    --muted: 30 14% 88%;
+    --muted-foreground: 20 5% 40%;
+    --accent: 245 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 34 14% 81%;
+    --input: 34 14% 81%;
+    --ring: 245 100% 50%;
+    --chart-1: 245 100% 50%;
+    --chart-2: 160 60% 40%;
+    --chart-3: 217 91% 60%;
+    --chart-4: 142 71% 45%;
+    --chart-5: 340 65% 50%;
+    --radius: 0.75rem;
+    --sidebar: 30 33% 94%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-border: 34 14% 81%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    transition: background-color 300ms ease, color 300ms ease;
+  }
+}
+
+/* Landing page serif font (Cinzel via next/font/google) */
+.font-serif {
+  font-family: var(--font-cinzel), serif;
+}
+
+/* Landing page body font (Inter via next/font/google) */
+.font-body {
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Landing page gradient animation */
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Landing page theme system */
+/* Default dark values on :root so the page is never unstyled, even before JS sets data-theme. */
+/* Dashboard pages use the :root HSL variables above and are unaffected. */
+
+:root {
+  --lp-bg-primary: #000000;
+  --lp-bg-secondary: #0A0A0A;
+  --lp-bg-card: rgba(255,255,255,0.03);
+  --lp-border: rgba(255,255,255,0.08);
+  --lp-border-hover: rgba(255,255,255,0.15);
+  --lp-text-primary: #FFFFFF;
+  --lp-text-secondary: rgba(255,255,255,0.6);
+  --lp-text-muted: rgba(255,255,255,0.4);
+  --lp-accent: #7C3AED;
+  --lp-accent-hover: #6D28D9;
+  --lp-bg-card-hover: rgba(255,255,255,0.06);
+  --lp-divider: rgba(255,255,255,0.06);
+  --lp-code-bg: #0A0A0A;
+  --lp-code-border: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] {
+  --lp-bg-primary: #000000;
+  --lp-bg-secondary: #0A0A0A;
+  --lp-bg-card: rgba(255,255,255,0.03);
+  --lp-border: rgba(255,255,255,0.08);
+  --lp-border-hover: rgba(255,255,255,0.15);
+  --lp-text-primary: #FFFFFF;
+  --lp-text-secondary: rgba(255,255,255,0.6);
+  --lp-text-muted: rgba(255,255,255,0.4);
+  --lp-accent: #7C3AED;
+  --lp-accent-hover: #6D28D9;
+  --lp-bg-card-hover: rgba(255,255,255,0.06);
+  --lp-divider: rgba(255,255,255,0.06);
+  --lp-code-bg: #0A0A0A;
+  --lp-code-border: rgba(255,255,255,0.06);
+}
+
+[data-theme="light"] {
+  --lp-bg-primary: #FAF9F6;
+  --lp-bg-secondary: #F0EEE9;
+  --lp-bg-card: rgba(0,0,0,0.03);
+  --lp-border: rgba(0,0,0,0.08);
+  --lp-border-hover: rgba(0,0,0,0.15);
+  --lp-text-primary: #1A1A1A;
+  --lp-text-secondary: rgba(0,0,0,0.6);
+  --lp-text-muted: rgba(0,0,0,0.4);
+  --lp-accent: #7C3AED;
+  --lp-accent-hover: #6D28D9;
+  --lp-bg-card-hover: rgba(0,0,0,0.06);
+  --lp-divider: rgba(0,0,0,0.06);
+  --lp-code-bg: #F0EEE9;
+  --lp-code-border: rgba(0,0,0,0.08);
+}
+
+/* Scrollbar styling */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+}

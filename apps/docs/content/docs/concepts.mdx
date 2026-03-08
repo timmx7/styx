@@ -1,0 +1,168 @@
+---
+title: How Styx works
+description: Understand the key concepts behind Styx, explained simply.
+---
+
+# How Styx works
+
+This page explains what Styx does behind the scenes, in plain language. No technical background required.
+
+---
+
+## What is MCP?
+
+**MCP (Model Context Protocol)** is an open standard that lets AI tools — like Claude Desktop, Cursor, and Windsurf — connect to external services. Think of it as **USB-C for AI**: one protocol, every tool.
+
+Styx is an MCP server. When you install it, your AI tools automatically discover capabilities like:
+- Listing all available models across providers
+- Switching between models with natural language
+- Sending chat completions through any provider
+- Checking usage and managing your account
+
+```
+Your AI Tool (Claude, Cursor...)
+      |
+      | MCP Protocol
+      v
+  Styx MCP Server
+      |
+      v
+  OpenAI / Anthropic / Google / Mistral
+```
+
+No code needed. Just install and start talking.
+
+---
+
+## What is an API Gateway?
+
+For developers using the REST API, Styx works as a **smart post office for AI requests**.
+
+When your app asks a question to ChatGPT, that question travels over the internet to OpenAI's servers. Styx sits in the middle and does useful things along the way:
+
+```
+Your App  ---->  Styx (the gateway)  ---->  OpenAI / Anthropic / Google
+                      |
+                  What Styx does:
+                  - Checks your API key
+                  - Looks for cached answers
+                  - Picks the best provider
+                  - Tracks costs
+                  - Logs everything
+```
+
+---
+
+## Smart routing
+
+When your app sends a request, Styx decides which AI provider should handle it.
+
+**Simple question** (like "What's 2+2?")
+-> Sent to a fast, cheap model (like GPT-4o Mini)
+
+**Complex question** (like "Write me a 2000-word essay about quantum physics")
+-> Sent to a powerful model (like GPT-4o or Claude)
+
+This happens automatically. You don't need to think about which model to use — Styx picks the best one based on your settings.
+
+> **You can also force a specific model.** Set `model: "gpt-4o"` in your request, or tell your AI tool: *"Use GPT-4o for this."*
+
+---
+
+## Semantic caching
+
+If two users ask the same (or very similar) question, why pay for it twice?
+
+**How it works:**
+
+1. User A asks: *"What is the capital of France?"*
+2. Styx sends it to OpenAI and gets: *"Paris"*
+3. Styx **saves** this answer
+4. User B asks: *"What's France's capital city?"*
+5. Styx recognizes it's basically the same question
+6. Styx **returns the saved answer instantly** — no API call, no cost
+
+This is called **semantic caching**. "Semantic" means it understands the *meaning*, not just the exact words. So even if the question is worded differently, Styx can find the cached answer.
+
+**Result:** Faster responses and lower costs. Typically saves up to 80% on your API bill.
+
+---
+
+## Automatic fallback
+
+What happens if OpenAI goes down? Without Styx, your app crashes. With Styx:
+
+1. Your app sends a request
+2. Styx tries to reach OpenAI
+3. OpenAI is down (timeout or error)
+4. Styx **automatically switches** to Anthropic (Claude)
+5. Your app gets a response as if nothing happened
+
+You never need to write fallback logic in your code. Styx handles it for you.
+
+---
+
+## Rate limiting
+
+To protect your budget and prevent abuse, Styx limits how many requests you can send per minute.
+
+If you go over the limit, you'll get a `429 Too Many Requests` error. This is normal — just wait a few seconds and try again.
+
+You can configure your rate limits in the **dashboard > Project settings**.
+
+---
+
+## Projects and API Keys
+
+### Projects
+
+A **project** groups everything related to one app:
+- Its API keys
+- Its usage statistics
+- Its routing rules
+- Its budget limits
+
+### API Keys
+
+An **API key** is like a password that identifies your app. Every request to Styx must include one.
+
+- Keys start with `sk-styx-` so you can easily identify them
+- You can create multiple keys per project
+- You can revoke a key at any time from the dashboard
+- API keys work with both MCP and REST API connections
+
+---
+
+## The dashboard
+
+The [dashboard](https://app.styx.sh) is your control center:
+
+| Section | What it shows |
+|---|---|
+| **Overview** | Total requests, costs, and performance at a glance |
+| **Analytics** | Charts showing usage over time, per model, per provider |
+| **API Keys** | Create, view, and revoke your API keys |
+| **Projects** | Manage your projects and their settings |
+| **Logs** | Every single request with its status, latency, and cost |
+| **Billing** | Your plan, usage, and invoices |
+
+---
+
+## Glossary
+
+| Term | Simple explanation |
+|---|---|
+| **MCP** | Model Context Protocol — an open standard for AI tools to connect to services |
+| **API** | A way for two programs to talk to each other over the internet |
+| **API key** | A secret password that identifies your app |
+| **Request** | One message you send to an AI model (a question, a task...) |
+| **Response** | The answer you get back from the AI model |
+| **Provider** | A company that runs AI models (OpenAI, Anthropic, Google...) |
+| **Model** | A specific AI "brain" (GPT-4o, Claude, Gemini...) |
+| **Latency** | How long it takes to get a response (in milliseconds) |
+| **Token** | A small piece of text (roughly 3/4 of a word). AI models charge per token. |
+| **Cache hit** | When Styx finds a saved answer instead of calling the provider |
+| **Fallback** | Automatically switching to a backup provider when one fails |
+| **Rate limit** | Maximum number of requests allowed per minute |
+| **BYOK** | Bring Your Own Keys — use your existing provider API keys through Styx |
+| **SDK** | A package you install to make it easier to use Styx from your code |

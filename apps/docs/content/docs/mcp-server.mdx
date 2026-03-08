@@ -1,0 +1,171 @@
+---
+title: MCP Server
+description: Connect Claude Desktop, Cursor, Windsurf, and any MCP client to Styx in under 2 minutes.
+---
+
+# MCP Server
+
+The Styx MCP server lets any MCP-compatible AI tool interact with the Styx gateway natively. List models, switch providers, send requests, and manage your account — all through natural language.
+
+> **What is MCP?** The Model Context Protocol is an open standard that lets AI tools connect to external services. Think of it as USB-C for AI — one protocol, every tool.
+
+---
+
+## Install
+
+<Tabs items={["npx (recommended)", "pip", "From source"]}>
+
+<Tab value="npx (recommended)">
+
+```bash
+npx styx-mcp --api-key $STYX_API_KEY
+```
+
+</Tab>
+
+<Tab value="pip">
+
+```bash
+pip install styx-gateway
+styx-mcp --api-key $STYX_API_KEY
+```
+
+</Tab>
+
+<Tab value="From source">
+
+```bash
+git clone https://github.com/styx-ai/styx-mcp-server
+cd styx-mcp-server
+pip install -r requirements.txt
+python server.py
+```
+
+</Tab>
+
+</Tabs>
+
+---
+
+## Connect to Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "styx": {
+      "command": "npx",
+      "args": ["styx-mcp"],
+      "env": {
+        "STYX_API_KEY": "sk-styx-xxx",
+        "STYX_TOKEN": "your-jwt-token"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop. You should see "styx" listed in your MCP servers.
+
+---
+
+## Connect to Claude Code
+
+Add to `.mcp.json` in your project root (or `~/.claude/mcp.json` for global access):
+
+```json
+{
+  "mcpServers": {
+    "styx": {
+      "command": "npx",
+      "args": ["styx-mcp"],
+      "env": {
+        "STYX_API_KEY": "sk-styx-xxx",
+        "STYX_TOKEN": "your-jwt-token"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Connect to Cursor / Windsurf
+
+Both editors support MCP servers. Add Styx using the same `npx styx-mcp` command in your editor's MCP settings panel.
+
+---
+
+## Available Tools
+
+Once connected, your AI tool automatically discovers these capabilities:
+
+| Tool | Description |
+|------|-------------|
+| `styx_send_request` | Send chat completions through the Styx gateway |
+| `styx_list_models` | List all available AI models with pricing |
+| `styx_switch_model` | Set a default model for the session |
+| `styx_list_projects` | List all projects for the authenticated user |
+| `styx_create_project` | Create a new project |
+| `styx_list_api_keys` | List API keys (prefixes only) |
+| `styx_create_api_key` | Create a new API key (shown once) |
+| `styx_check_usage` | Get usage statistics and per-provider breakdown |
+| `styx_manage_providers` | Manage BYOK provider keys (list/add/remove) |
+
+---
+
+## Usage Examples
+
+With MCP, you interact with Styx through natural language. No code needed.
+
+```
+"What models are available on Styx?"
+  -> Your tool calls styx_list_models
+
+"Switch to GPT-4o"
+  -> Your tool calls styx_switch_model(model="gpt-4o")
+
+"Summarize this document using Claude"
+  -> Your tool calls styx_send_request with the document content
+
+"Show my usage for the last 7 days"
+  -> Your tool calls styx_check_usage(days=7)
+
+"Add my OpenAI key to project prod-app"
+  -> Your tool calls styx_manage_providers(action="add", ...)
+```
+
+---
+
+## Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `STYX_API_KEY` | For AI requests | — | API key for proxy requests (starts with `sk-styx-`) |
+| `STYX_TOKEN` | For management | — | JWT auth token for account operations |
+| `STYX_API_URL` | No | `https://api.styx.sh` | Backend API URL |
+| `STYX_PROXY_URL` | No | `https://proxy.styx.sh` | Proxy URL for chat completions |
+
+---
+
+## Transport Modes
+
+```bash
+# stdio (default — for Claude Desktop, Claude Code, Cursor)
+python server.py
+
+# SSE (for web-based clients, port 8090)
+python server.py --transport sse
+```
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Tool not showing up | Restart your AI tool after adding the MCP config |
+| `STYX_API_KEY not set` | Check your env vars are passed correctly in the config |
+| `401 Unauthorized` | Your API key or JWT token is expired. Regenerate in the dashboard |
+| Timeout errors | Check that `STYX_API_URL` and `STYX_PROXY_URL` are reachable |
