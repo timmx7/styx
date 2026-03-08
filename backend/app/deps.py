@@ -132,11 +132,17 @@ async def _auto_create_user(
     supabase_uid: uuid.UUID,
     email: str,
     db: AsyncSession,
+    *,
+    team_id: uuid.UUID | None = None,
+    project_id: uuid.UUID | None = None,
 ) -> User:
     """Create a local User row (+ default Team & Project) for a Supabase user.
 
     This handles the race condition where a Supabase signup webhook hasn't
     arrived yet but the user's JWT is already valid.
+
+    Optional ``team_id`` / ``project_id`` allow dev-mode callers to pin the
+    IDs so they match what the Go router expects (SKIP_AUTH flow).
     """
     from app.models.team import Team
     from app.models.project import Project
@@ -157,20 +163,58 @@ async def _auto_create_user(
         result = await db.execute(select(User).where(User.id == supabase_uid))
         return result.scalar_one()
 
-    team = Team(name=f"{user.name}'s Team", owner_id=user.id)
+    team_kwargs: dict = {"name": f"{user.name}'s Team", "owner_id": user.id}
+    if team_id is not None:
+        team_kwargs["id"] = team_id
+    team = Team(**team_kwargs)
     db.add(team)
     await db.flush()
 
     member = TeamMember(team_id=team.id, user_id=user.id, role="owner")
     db.add(member)
 
-    project = Project(team_id=team.id, name="Default Project")
+    project_kwargs: dict = {"team_id": team.id, "name": "Default Project"}
+    if project_id is not None:
+        project_kwargs["id"] = project_id
+    project = Project(**project_kwargs)
     db.add(project)
 
     await db.commit()
     await db.refresh(user)
     logger.info("auto-created user %s (%s) with team + project", supabase_uid, email)
     return user
+
+
+async def _ensure_dev_fixtures(
+    db: AsyncSession,
+    user: User,
+    team_id: uuid.UUID,
+    project_id: uuid.UUID,
+) -> None:
+    """Ensure the dev Team & Project expected by the Go router exist.
+
+    Called when the dev user already exists but the database may have been
+    created before the IDs were pinned (team/project have random UUIDs).
+    Without the matching project, /internal/log-usage returns 404 and no
+    request stats appear in the dashboard.
+    """
+    from app.models.team import Team
+    from app.models.project import Project
+
+    result = await db.execute(select(Project.id).where(Project.id == project_id))
+    if result.scalar_one_or_none() is not None:
+        return  # Already present
+
+    # Ensure the dev team exists
+    result = await db.execute(select(Team.id).where(Team.id == team_id))
+    if result.scalar_one_or_none() is None:
+        db.add(Team(id=team_id, name="Dev Team", owner_id=user.id))
+        await db.flush()
+        db.add(TeamMember(team_id=team_id, user_id=user.id, role="owner"))
+
+    db.add(Project(id=project_id, team_id=team_id, name="Dev Project"))
+    await db.commit()
+    logger.info("created dev fixtures: team=%s project=%s", team_id, project_id)
 
 
 async def get_current_user(
@@ -185,12 +229,22 @@ async def get_current_user(
     raises 403 "Please verify your email".
     """
     # ── Dev mode: skip auth entirely, return a fixed dev user ──
+    # These IDs must match the Go router's SKIP_AUTH KeyInfo (validator.go).
     if settings.skip_auth:
         dev_uid = uuid.UUID("00000000-0000-0000-0000-000000000001")
+        dev_team_id = uuid.UUID("00000000-0000-0000-0000-000000000003")
+        dev_project_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
+
         result = await db.execute(select(User).where(User.id == dev_uid))
         user = result.scalar_one_or_none()
         if user is None:
-            user = await _auto_create_user(dev_uid, "dev@styx.local", db)
+            user = await _auto_create_user(
+                dev_uid, "dev@styx.local", db,
+                team_id=dev_team_id, project_id=dev_project_id,
+            )
+        else:
+            # Existing DB — ensure the dev project the Go router logs to exists.
+            await _ensure_dev_fixtures(db, user, dev_team_id, dev_project_id)
         return user
 
     token = None
