@@ -1,0 +1,181 @@
+---
+title: Use without SDK
+description: Use Styx with any language by changing one URL. No package to install.
+---
+
+# Use without SDK
+
+You don't need to install anything to use Styx via the REST API. It works with **any programming language** and **any HTTP client**. The only thing you need to change is the base URL.
+
+> **Prefer MCP?** If you're using Claude Desktop, Cursor, or Windsurf, check out the [MCP Server guide](/docs/mcp-server) — no code needed at all.
+
+---
+
+## The idea
+
+Every AI provider (OpenAI, Anthropic...) has a URL where you send requests. Styx gives you a single URL that replaces all of them:
+
+| Before (direct to provider) | After (through Styx) |
+|---|---|
+| `https://api.openai.com/v1` | `https://api.styx.sh/v1` |
+
+That's literally it. Change the URL, change the API key to your Styx key, and everything works.
+
+---
+
+## Examples
+
+<Tabs items={["cURL", "Python (no SDK)", "JavaScript (no SDK)", "PHP", "Ruby"]}>
+
+<Tab value="cURL">
+
+```bash
+curl https://api.styx.sh/v1/chat/completions \
+  -H "Authorization: Bearer sk-styx-your-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
+  }'
+```
+
+</Tab>
+
+<Tab value="Python (no SDK)">
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.styx.sh/v1/chat/completions",
+    headers={
+        "Authorization": "Bearer sk-styx-your-key-here",
+        "Content-Type": "application/json",
+    },
+    json={
+        "model": "gpt-4o",
+        "messages": [
+            {"role": "user", "content": "Hello!"}
+        ],
+    },
+)
+
+data = response.json()
+print(data["choices"][0]["message"]["content"])
+```
+
+</Tab>
+
+<Tab value="JavaScript (no SDK)">
+
+```js
+const response = await fetch("https://api.styx.sh/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer sk-styx-your-key-here",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    model: "gpt-4o",
+    messages: [
+      { role: "user", content: "Hello!" }
+    ],
+  }),
+});
+
+const data = await response.json();
+console.log(data.choices[0].message.content);
+```
+
+</Tab>
+
+<Tab value="PHP">
+
+```php
+<?php
+$url = "https://api.styx.sh/v1/chat/completions";
+
+$data = [
+    "model" => "gpt-4o",
+    "messages" => [
+        ["role" => "user", "content" => "Hello!"]
+    ],
+];
+
+$options = [
+    "http" => [
+        "header"  => "Authorization: Bearer sk-styx-your-key-here\r\n" .
+                     "Content-Type: application/json\r\n",
+        "method"  => "POST",
+        "content" => json_encode($data),
+    ],
+];
+
+$context  = stream_context_create($options);
+$response = file_get_contents($url, false, $context);
+$result   = json_decode($response, true);
+
+echo $result["choices"][0]["message"]["content"];
+```
+
+</Tab>
+
+<Tab value="Ruby">
+
+```ruby
+require "net/http"
+require "json"
+
+uri = URI("https://api.styx.sh/v1/chat/completions")
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+
+request = Net::HTTP::Post.new(uri)
+request["Authorization"] = "Bearer sk-styx-your-key-here"
+request["Content-Type"] = "application/json"
+request.body = {
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello!" }]
+}.to_json
+
+response = http.request(request)
+data = JSON.parse(response.body)
+puts data["choices"][0]["message"]["content"]
+```
+
+</Tab>
+
+</Tabs>
+
+---
+
+## Custom headers
+
+You can pass extra information to Styx using HTTP headers:
+
+| Header | Description |
+|---|---|
+| `X-Styx-Project-Id` | Tag this request with a project |
+| `X-Styx-End-User-Id` | Tag this request with an end user |
+| `X-Styx-Target-Provider` | Force a specific provider (`openai`, `anthropic`, `google`) |
+| `X-Styx-Routing-Strategy` | Override routing (`cost`, `latency`, `quality`) |
+
+---
+
+## Why use MCP or the SDK then?
+
+| Feature | Raw HTTP | OpenAI SDK | MCP |
+|---|---|---|---|
+| Type safety | No | Yes | N/A |
+| Automatic retries | You handle it | Built-in | Built-in |
+| Streaming helpers | Parse SSE manually | Simple `for` loop | Automatic |
+| Error classes | Check HTTP status codes | Typed exceptions | Handled |
+| Model switching | Change code | Change code | Natural language |
+| Tool discovery | Manual | Manual | Automatic |
+| No code needed | No | No | Yes |
+
+**For AI tools (Claude, Cursor, Windsurf):** Use [MCP](/docs/mcp-server) — zero code.
+**For Python or Node.js apps:** Use the [OpenAI SDK](/docs/sdks/python) with Styx's base URL.
+**For other languages:** The raw HTTP approach works perfectly.

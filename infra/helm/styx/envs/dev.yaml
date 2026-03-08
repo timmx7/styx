@@ -1,0 +1,120 @@
+# ══════════════════════════════════════════════════════════════════════
+# Development environment — single replica, minimal resources
+# Usage: helm install styx . -f envs/dev.yaml
+# ══════════════════════════════════════════════════════════════════════
+
+secrets:
+  jwtSecret: "dev-secret-change-in-production"
+  internalSecret: "dev-internal-secret-change-in-production"
+  apiKeyHmacSecret: "dev-hmac-secret-change-in-production"
+  postgresPassword: "styx"
+
+router:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 128Mi
+  pdb:
+    enabled: false
+
+backend:
+  replicaCount: 1
+  debug: true
+  corsOrigins: "http://localhost:3000,http://127.0.0.1:3000"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  pdb:
+    enabled: false
+
+classifier:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+cacheService:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+dashboard:
+  replicaCount: 1
+  publicApiUrl: "http://localhost:8000"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+
+postgresql:
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+redis:
+  persistence:
+    size: 512Mi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+
+qdrant:
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+clickhouse:
+  persistence:
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+ingress:
+  enabled: false
+
+networkPolicies:
+  enabled: false
+
+serviceMonitor:
+  enabled: false

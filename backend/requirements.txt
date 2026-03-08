@@ -1,0 +1,32 @@
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic[email]==2.10.3
+pydantic-settings==2.7.0
+
+# Database
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+aiosqlite==0.20.0
+alembic==1.14.0
+
+# Auth
+PyJWT[crypto]==2.9.0
+cryptography>=42.0.0
+
+# Redis
+redis[hiredis]==5.2.1
+
+# Stripe
+stripe==11.3.0
+
+# Monitoring
+sentry-sdk[fastapi]>=2.0.0
+
+# Utilities
+python-multipart==0.0.18
+httpx==0.28.1
+
+# ML (classifier)
+scikit-learn>=1.4.0
+numpy>=1.26.0

@@ -1,0 +1,47 @@
+{
+  "name": "@styx/node",
+  "version": "1.0.0",
+  "description": "The official Node.js SDK for Styx.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src/",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "styx",
+    "openai",
+    "llm",
+    "ai",
+    "gateway"
+  ],
+  "author": "Styx",
+  "license": "MIT",
+  "peerDependencies": {
+    "openai": "^4.0.0"
+  },
+  "dependencies": {
+    "openai": "^4.79.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "eslint": "^9.19.0",
+    "prettier": "^3.4.2",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3"
+  }
+}

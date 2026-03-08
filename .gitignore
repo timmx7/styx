@@ -1,0 +1,94 @@
+# ─── OS ──────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Secrets (NEVER commit) ──────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.save
+*.crt
+*.cert
+*.der
+*.jks
+*.p8
+
+# ─── Python ──────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.pkl
+*.joblib
+
+# ─── Go ──────────────────────────────────────────────────────────
+/router/styx-router
+/router/server
+/router/bin/
+*.exe
+*.out
+
+# ─── Node / Next.js ──────────────────────────────────────────────
+node_modules/
+.next/
+.swc/
+out/
+.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Docker ──────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── IDEs ────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── Stripe ─────────────────────────────────────────────────────
+.stripe-ids.env
+
+# ─── Docker volumes ─────────────────────────────────────────────
+postgres_data/
+redis_data/
+clickhouse_data/
+qdrant_data/
+
+# ─── Coverage / Testing ────────────────────────────────────────
+coverage/
+htmlcov/
+.coverage
+.pytest_cache/
+**/test_output.txt
+
+# ─── Internal / Claude Code ──────────────────────────────────────
+CLAUDE.md
+.claude/
+docs/plans/
+.cursorrules
+PROMPT_*
+TODO_BEFORE_LAUNCH*
+
+# ─── Internal audit / sprint notes (not for public consumption) ──
+AUDIT.md
+AUDIT_REPORT.md
+CLEANUP.md
+SPRINT_REPORT.md
+
+# ─── Misc ────────────────────────────────────────────────────────
+*.log
+logs/
+tmp/
+.cache/
+mon-dashboard/
+*.png
+SPRINT_REPORT.md

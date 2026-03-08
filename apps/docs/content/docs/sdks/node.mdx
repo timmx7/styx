@@ -1,0 +1,188 @@
+---
+title: Node.js SDK
+description: Use the OpenAI Node.js SDK with Styx as a drop-in replacement.
+---
+
+# Node.js SDK
+
+Styx is fully compatible with the official OpenAI Node.js/TypeScript SDK. Just change the `baseURL` — no new package to learn.
+
+> **Prefer MCP?** If you're using Claude Desktop, Cursor, or Windsurf, you don't need the SDK at all. Check the [MCP Server guide](/docs/mcp-server) instead.
+
+> **New to Node.js?** Make sure you have Node.js 18 or later installed. Check with `node --version` in your terminal.
+
+---
+
+## Install
+
+```bash
+npm install openai
+```
+
+Or with other package managers:
+
+```bash
+yarn add openai     # Yarn
+pnpm add openai     # pnpm
+```
+
+---
+
+## Basic usage
+
+```ts
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "sk-styx-your-key-here",
+  baseURL: "https://api.styx.sh/v1",
+});
+
+const response = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [
+    { role: "user", content: "Explain quantum physics in one sentence." }
+  ],
+});
+
+console.log(response.choices[0].message.content);
+```
+
+### What's happening here?
+
+1. **`new OpenAI({...})`** creates a connection to Styx using the standard OpenAI SDK.
+2. **`baseURL`** points to Styx instead of OpenAI directly.
+3. **`client.chat.completions.create({...})`** sends your question to the AI model.
+4. **`response.choices[0].message.content`** contains the AI's answer as text.
+
+---
+
+## Use environment variables (recommended)
+
+Never put your API key directly in your code:
+
+### 1. Create a `.env` file
+
+```
+STYX_API_KEY=sk-styx-your-key-here
+```
+
+### 2. Use it in your code
+
+```ts
+const client = new OpenAI({
+  apiKey: process.env.STYX_API_KEY,
+  baseURL: "https://api.styx.sh/v1",
+});
+```
+
+---
+
+## Switch models instantly
+
+Switch between any provider's models by changing one word:
+
+```ts
+// Use OpenAI
+const response = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello!" }],
+});
+
+// Use Anthropic — same code, different model name
+const response = await client.chat.completions.create({
+  model: "claude-sonnet-4-20250514",
+  messages: [{ role: "user", content: "Hello!" }],
+});
+```
+
+No new SDKs, no new API keys.
+
+---
+
+## Streaming responses
+
+Get the response word by word instead of waiting for the full text:
+
+```ts
+const stream = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Write a short poem." }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  const text = chunk.choices[0]?.delta?.content || "";
+  process.stdout.write(text);
+}
+```
+
+---
+
+## Use with Next.js
+
+Styx works great in Next.js API routes and Server Actions:
+
+```ts
+// app/api/chat/route.ts
+import OpenAI from "openai";
+import { NextResponse } from "next/server";
+
+const client = new OpenAI({
+  apiKey: process.env.STYX_API_KEY,
+  baseURL: "https://api.styx.sh/v1",
+});
+
+export async function POST(request: Request) {
+  const { message } = await request.json();
+
+  const response = await client.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: message }],
+  });
+
+  return NextResponse.json({
+    answer: response.choices[0].message.content,
+  });
+}
+```
+
+> **Important:** Only use the OpenAI client on the **server side** (API routes, Server Components, Server Actions). Never expose your API key to the browser.
+
+---
+
+## Custom headers
+
+| Header | Description |
+|---|---|
+| `X-Styx-Project-Id` | Tag this request with a project |
+| `X-Styx-End-User-Id` | Tag this request with an end user |
+| `X-Styx-Target-Provider` | Force a specific provider (`openai`, `anthropic`, `google`) |
+| `X-Styx-Routing-Strategy` | Override routing (`cost`, `latency`, `quality`) |
+
+---
+
+## TypeScript support
+
+The OpenAI SDK includes full type definitions. You get autocompletion and type checking out of the box:
+
+```ts
+import OpenAI from "openai";
+import type { ChatCompletion } from "openai/resources";
+
+const response: ChatCompletion = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello!" }],
+});
+```
+
+---
+
+## Common errors
+
+| Error | What it means | How to fix it |
+|---|---|---|
+| `AuthenticationError` | Your API key is invalid | Check your key in the dashboard |
+| `RateLimitError` | Too many requests per minute | Wait a moment, then retry |
+| `APIConnectionError` | Can't reach Styx servers | Check your internet connection |
+| `BadRequestError` | Something wrong with your request | Check the model name and message format |

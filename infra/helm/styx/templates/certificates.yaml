@@ -1,0 +1,63 @@
+{{/*
+══════════════════════════════════════════════════════════════════════
+Certificate resources — contrôle explicite des certificats TLS.
+
+Bien que cert-manager puisse créer les certificats automatiquement
+via l'annotation Ingress, un Certificate explicite permet de :
+  - Contrôler la durée (duration) et le seuil de renouvellement
+  - Ajouter des SANs (Subject Alternative Names) supplémentaires
+  - Définir le format de la clé privée (RSA vs ECDSA)
+  - Monitorer l'état du certificat via kubectl
+
+Chaque host TLS de l'Ingress reçoit son propre Certificate.
+══════════════════════════════════════════════════════════════════════
+*/}}
+{{- if and .Values.ingress.enabled .Values.certManager.clusterIssuers.enabled .Values.ingress.tls }}
+{{- range .Values.ingress.tls }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .secretName }}
+  labels:
+    {{- include "styx.labels" $ | nindent 4 }}
+spec:
+  # Nom du Secret K8s où le cert sera stocké
+  secretName: {{ .secretName }}
+
+  # Durée du certificat (Let's Encrypt émet pour 90 jours max)
+  duration: 2160h       # 90 jours
+  # Renouveler 30 jours avant expiration
+  renewBefore: 720h     # 30 jours
+
+  # Algorithme de la clé privée — ECDSA P-256 pour performance
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+
+  # Noms de domaine couverts
+  dnsNames:
+    {{- range .hosts }}
+    - {{ . | quote }}
+    {{- end }}
+
+  # ClusterIssuer Let's Encrypt à utiliser
+  issuerRef:
+    {{- $issuerName := "letsencrypt-prod" }}
+    {{- range $k, $v := $.Values.ingress.annotations }}
+    {{- if eq $k "cert-manager.io/cluster-issuer" }}
+    {{- $issuerName = $v }}
+    {{- end }}
+    {{- end }}
+    name: {{ $issuerName }}
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+  # Utilisation du certificat
+  usages:
+    - server auth
+    - digital signature
+    - key encipherment
+{{- end }}
+{{- end }}

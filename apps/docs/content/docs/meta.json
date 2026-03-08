@@ -1,0 +1,14 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "---Getting Started---",
+    "index",
+    "...getting-started",
+    "---Connect---",
+    "mcp-server",
+    "concepts",
+    "dashboard",
+    "---SDKs & REST API---",
+    "...sdks"
+  ]
+}

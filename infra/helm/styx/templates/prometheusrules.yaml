@@ -1,0 +1,242 @@
+{{/*
+══════════════════════════════════════════════════════════════════════
+PrometheusRule — SLO-based alerting for Styx.
+
+Alert categories:
+  1. Latency     → p99 and average latency thresholds
+  2. Error rate  → 5xx and provider failure rates
+  3. Cache       → cache hit rate drops
+  4. Saturation  → pod CPU/memory, Redis, Postgres connections
+  5. Availability → service down, circuit breaker open
+══════════════════════════════════════════════════════════════════════
+*/}}
+{{- if and .Values.monitoring.enabled .Values.monitoring.alertingRules.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "styx.fullname" . }}-alerts
+  labels:
+    {{- include "styx.labels" . | nindent 4 }}
+    release: {{ .Release.Name }}
+spec:
+  groups:
+    # ── 1. Latency Alerts ──────────────────────────────────────────────
+    - name: styx.latency
+      rules:
+        - alert: StyxHighLatencyP99
+          expr: |
+            (
+              styx_request_duration_seconds_sum
+              / styx_request_duration_seconds_count
+            ) > 5
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Styx average latency exceeds 5s"
+            description: >-
+              Average request latency is
+              {{`{{ $value | printf "%.1f" }}`}}s (threshold: 5s).
+              Check provider health and classifier performance.
+            runbook_url: https://docs.styx.ai/runbooks/high-latency
+
+        - alert: StyxHighLatencyProviderP99
+          expr: |
+            (
+              styx_request_duration_seconds_sum
+              / styx_request_duration_seconds_count
+            ) > 10
+          for: 3m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Styx average latency exceeds 10s"
+            description: >-
+              Average request latency is
+              {{`{{ $value | printf "%.1f" }}`}}s.
+              Immediate investigation required — users are likely timing out.
+
+    # ── 2. Error Rate Alerts ───────────────────────────────────────────
+    - name: styx.errors
+      rules:
+        - alert: StyxHighErrorRate
+          expr: |
+            (
+              sum(rate(styx_requests_total{status=~"5.."}[5m]))
+              / sum(rate(styx_requests_total[5m]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Styx error rate > 5%"
+            description: >-
+              {{`{{ $value | printf "%.1f" }}`}}% of requests are returning 5xx.
+              Check provider errors and circuit breaker states.
+
+        - alert: StyxCriticalErrorRate
+          expr: |
+            (
+              sum(rate(styx_requests_total{status=~"5.."}[5m]))
+              / sum(rate(styx_requests_total[5m]))
+            ) > 0.15
+          for: 2m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Styx error rate > 15% — critical"
+            description: >-
+              {{`{{ $value | printf "%.1f" }}`}}% of requests are failing.
+              Multiple providers may be down. Check /health endpoint.
+
+        - alert: StyxProviderErrorSpike
+          expr: |
+            sum by (provider) (rate(styx_provider_errors_total[5m])) > 0.5
+          for: 3m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Provider {{`{{ $labels.provider }}`}} error rate spiking"
+            description: >-
+              Provider {{`{{ $labels.provider }}`}} is generating
+              {{`{{ $value | printf "%.2f" }}`}} errors/sec.
+              Circuit breaker may open soon.
+
+    # ── 3. Cache Performance Alerts ────────────────────────────────────
+    - name: styx.cache
+      rules:
+        - alert: StyxCacheHitRateLow
+          expr: |
+            (
+              rate(styx_cache_hits_total[15m])
+              / (rate(styx_cache_hits_total[15m]) + rate(styx_cache_misses_total[15m]))
+            ) < 0.1
+          for: 15m
+          labels:
+            severity: info
+            team: platform
+          annotations:
+            summary: "Cache hit rate below 10%"
+            description: >-
+              Semantic cache hit rate is {{`{{ $value | printf "%.1f" }}`}}%.
+              This may indicate cache cold start, Qdrant issues, or new traffic patterns.
+
+        - alert: StyxCacheServiceDown
+          expr: |
+            rate(styx_cache_hits_total[5m]) == 0
+            and rate(styx_cache_misses_total[5m]) == 0
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "No cache activity — cache service may be down"
+            description: >-
+              Both cache hits and misses are zero.
+              The cache-service or Qdrant may be unreachable.
+
+    # ── 4. Saturation / Resource Alerts ────────────────────────────────
+    - name: styx.saturation
+      rules:
+        - alert: StyxRouterHighCPU
+          expr: |
+            sum by (pod) (
+              rate(container_cpu_usage_seconds_total{
+                container="router",
+                namespace="{{ .Release.Namespace }}"
+              }[5m])
+            ) > 0.8
+          for: 10m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Router pod {{`{{ $labels.pod }}`}} CPU > 80%"
+            description: >-
+              Consider scaling up the router — current CPU usage is
+              {{`{{ $value | printf "%.0f" }}`}}%.
+
+        - alert: StyxRouterHighMemory
+          expr: |
+            sum by (pod) (
+              container_memory_working_set_bytes{
+                container="router",
+                namespace="{{ .Release.Namespace }}"
+              }
+            )
+            / sum by (pod) (
+              kube_pod_container_resource_limits{
+                container="router",
+                resource="memory",
+                namespace="{{ .Release.Namespace }}"
+              }
+            ) > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Router pod {{`{{ $labels.pod }}`}} memory > 85% of limit"
+            description: >-
+              Memory usage is {{`{{ $value | printf "%.0f" }}`}}% of limit.
+              Risk of OOM kill.
+
+        - alert: StyxPostgresHighConnections
+          expr: |
+            sum(pg_stat_activity_count{datname="styx"}) > 80
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "PostgreSQL connection count > 80"
+            description: >-
+              {{`{{ $value }}`}} active connections to styx database.
+              Max is typically 100. Consider connection pooling.
+
+    # ── 5. Availability Alerts ─────────────────────────────────────────
+    - name: styx.availability
+      rules:
+        - alert: StyxRouterDown
+          expr: styx_up == 0 or absent(styx_up)
+          for: 1m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Styx router is DOWN"
+            description: >-
+              The router is not reporting metrics. All API traffic is likely failing.
+              Check pod status immediately.
+
+        - alert: StyxHighRequestRate
+          expr: |
+            sum(rate(styx_requests_total[1m])) > 1000
+          for: 5m
+          labels:
+            severity: info
+            team: platform
+          annotations:
+            summary: "Request rate exceeds 1000 req/s"
+            description: >-
+              Current rate: {{`{{ $value | printf "%.0f" }}`}} req/s.
+              Ensure autoscaling is active and providers can handle the load.
+
+        - alert: StyxNoTraffic
+          expr: |
+            sum(rate(styx_requests_total[10m])) == 0
+          for: 10m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "No traffic flowing through Styx"
+            description: >-
+              Zero requests in the last 10 minutes.
+              Check ingress, DNS, and client connectivity.
+{{- end }}

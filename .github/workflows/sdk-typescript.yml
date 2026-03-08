@@ -1,0 +1,100 @@
+# ══════════════════════════════════════════════════════════════════════
+# Styx TypeScript SDK — Test, Build & Publish to npm
+# ══════════════════════════════════════════════════════════════════════
+#
+# NOTE: This workflow does NOT use any user-controlled inputs in run: blocks.
+# All dynamic values are passed via env: to prevent injection attacks.
+#
+# Triggers:
+#   - Push/PR to main touching sdk/typescript/** → test only
+#   - Tag v*.*.* → test + build + publish to npm
+#   - Manual dispatch → test + optional publish
+#
+# Uses npm provenance (OIDC) for supply chain security.
+
+name: SDK TypeScript
+
+on:
+  push:
+    branches: [main]
+    paths: ["sdk/typescript/**"]
+    tags: ["v*.*.*"]
+  pull_request:
+    paths: ["sdk/typescript/**"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to npm"
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    working-directory: sdk/typescript
+
+jobs:
+  # ── 1. Test across Node versions ──────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["18", "20", "22"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+          cache-dependency-path: sdk/typescript/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  # ── 2. Publish to npm ─────────────────────────────────────────────
+  publish:
+    name: Publish to npm
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish == 'true'
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
+          cache-dependency-path: sdk/typescript/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish with provenance
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,133 @@
+{{- if .Values.backend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "styx.fullname" . }}-backend
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "backend") | nindent 4 }}
+spec:
+  {{- if not .Values.backend.autoscaling.enabled }}
+  replicas: {{ .Values.backend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "styx.selectorLabels" (dict "root" . "component" "backend") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- with .Values.backend.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "styx.componentLabels" (dict "root" . "component" "backend") | nindent 8 }}
+    spec:
+      {{- include "styx.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "styx.podSecurityContext" . | nindent 8 }}
+      initContainers:
+        {{- if .Values.postgresql.enabled }}
+        - name: wait-for-postgres
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          command: ['sh', '-c', 'until pg_isready -h {{ include "styx.fullname" . }}-postgresql -p {{ .Values.postgresql.service.port }} -U {{ .Values.postgresql.auth.username }}; do echo "Waiting for PostgreSQL..."; sleep 2; done']
+        {{- end }}
+      containers:
+        - name: backend
+          image: {{ include "styx.image" (dict "root" . "image" .Values.backend.image) }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          securityContext:
+            {{- include "styx.securityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.service.port }}
+              protocol: TCP
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "styx.secretName" . }}
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: {{ include "styx.postgresUrl" . | quote }}
+            - name: REDIS_URL
+              value: {{ include "styx.redisUrl" . | quote }}
+            - name: CLICKHOUSE_URL
+              value: {{ include "styx.clickhouseUrl" . | quote }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "styx.secretName" . }}
+                  key: JWT_SECRET
+            - name: INTERNAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "styx.secretName" . }}
+                  key: INTERNAL_SECRET
+            - name: API_KEY_HMAC_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "styx.secretName" . }}
+                  key: API_KEY_HMAC_SECRET
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "styx.secretName" . }}
+                  key: ENCRYPTION_KEY
+                  optional: true
+            - name: ENCRYPTION_KEY_PREVIOUS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "styx.secretName" . }}
+                  key: ENCRYPTION_KEY_PREVIOUS
+                  optional: true
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "styx.secretName" . }}
+                  key: STRIPE_SECRET_KEY
+                  optional: true
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "styx.secretName" . }}
+                  key: STRIPE_WEBHOOK_SECRET
+                  optional: true
+            - name: CORS_ORIGINS
+              value: {{ .Values.backend.corsOrigins | quote }}
+            - name: DEBUG
+              value: {{ .Values.backend.debug | quote }}
+            {{- range $key, $value := .Values.backend.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+          {{- with .Values.backend.probes.readiness }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.backend.probes.liveness }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.backend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

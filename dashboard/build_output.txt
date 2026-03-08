@@ -1,0 +1,53 @@
+
+> dashboard@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.35
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+Failed to compile.
+
+./src/app/(auth)/register/page.tsx
+27:5  Warning: Potential timing attack, left side: true  security/detect-possible-timing-attacks
+
+./src/app/(dashboard)/analytics/page.tsx
+101:45  Warning: Generic Object Injection Sink  security/detect-object-injection
+129:5  Warning: Generic Object Injection Sink  security/detect-object-injection
+
+./src/app/(dashboard)/layout.tsx
+56:21  Warning: Generic Object Injection Sink  security/detect-object-injection
+
+./src/app/(dashboard)/overview/page.tsx
+71:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+85:48  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/(dashboard)/projects/[id]/page.tsx
+294:28  Warning: Generic Object Injection Sink  security/detect-object-injection
+
+./src/app/(dashboard)/routing/page.tsx
+201:61  Warning: Generic Object Injection Sink  security/detect-object-injection
+
+./src/app/docs/page.tsx
+199:20  Warning: Generic Object Injection Sink  security/detect-object-injection
+203:30  Warning: Generic Object Injection Sink  security/detect-object-injection
+
+./src/components/charts/provider-chart.tsx
+24:3  Warning: Generic Object Injection Sink  security/detect-object-injection
+
+./src/components/layout/breadcrumbs.tsx
+28:19  Warning: Generic Object Injection Sink  security/detect-object-injection
+
+./src/lib/export-csv.ts
+32:30  Warning: Generic Object Injection Sink  security/detect-object-injection
+37:44  Warning: Generic Object Injection Sink  security/detect-object-injection
+
+./src/lib/i18n/context.tsx
+58:14  Warning: Generic Object Injection Sink  security/detect-object-injection
+58:14  Warning: Generic Object Injection Sink  security/detect-object-injection
+58:45  Warning: Generic Object Injection Sink  security/detect-object-injection
+58:45  Warning: Generic Object Injection Sink  security/detect-object-injection
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules

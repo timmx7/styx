@@ -1,0 +1,126 @@
+---
+title: Dashboard guide
+description: A visual tour of the Styx dashboard and what each section does.
+---
+
+# Dashboard guide
+
+The dashboard is where you manage everything: your API keys, your projects, your usage, and your billing. This page gives you a tour of each section.
+
+**Dashboard URL:** [app.styx.sh](https://app.styx.sh)
+
+---
+
+## Overview
+
+This is your home page after logging in. It shows a summary of your account:
+
+- **Total requests** --- How many API calls you've made this period
+- **Average latency** --- How fast your requests are being processed (in milliseconds)
+- **Cache hit rate** --- Percentage of requests answered from cache (higher = more savings)
+- **Cost saved** --- How much money the cache has saved you
+
+> **Tip:** If your cache hit rate is low, it means most of your requests are unique. That's normal for some use cases.
+
+---
+
+## API Keys
+
+This is where you create and manage your API keys. These keys work with both the MCP server and the REST API.
+
+### Create a new key
+
+1. Click **Create Key**
+2. Select which **project** this key belongs to
+3. Click **Generate**
+4. **Copy the key immediately** --- you won't be able to see it again
+
+### Revoke a key
+
+If a key gets compromised (someone else has it), revoke it immediately:
+
+1. Find the key in the list
+2. Click the **trash icon** or **Revoke**
+3. The key stops working instantly
+
+> **Good practice:** Create separate keys for development and production. If your dev key leaks, your production app isn't affected.
+
+---
+
+## Projects
+
+A project groups your API keys and settings for one app.
+
+### Create a project
+
+1. Click **New Project**
+2. Enter a name (e.g., `customer-chatbot`)
+3. Configure the settings (or leave the defaults)
+
+### Project settings
+
+Each project has its own settings:
+
+| Setting | What it does |
+|---|---|
+| **Routing strategy** | How Styx picks the AI model: by cost, speed, or quality |
+| **Rate limit** | Maximum requests per minute for this project |
+| **Budget limit** | Maximum spend per month (Styx blocks requests when reached) |
+| **Allowed models** | Which AI models this project can use |
+
+---
+
+## Analytics
+
+Charts and graphs showing how your app is using AI:
+
+- **Requests over time** --- See spikes or drops in usage
+- **Cost over time** --- Track your spending day by day
+- **Model distribution** --- Which AI models are being used most
+- **Provider distribution** --- How traffic is split between OpenAI, Anthropic, etc.
+- **Latency percentiles** --- P50, P95, P99 response times
+
+> **What are P50/P95/P99?** P50 means half of your requests are faster than this. P95 means 95% are faster. P99 means 99% are faster. Focus on P95 --- it tells you the experience of most of your users.
+
+---
+
+## Logs
+
+Every single request is logged here with full details:
+
+- **Timestamp** --- When the request was made
+- **Model** --- Which AI model was used
+- **Provider** --- Which provider handled it (OpenAI, Anthropic...)
+- **Status** --- Success or error
+- **Latency** --- How long it took
+- **Tokens** --- How many tokens were used (input + output)
+- **Cost** --- How much this request cost
+- **Cache** --- Whether it was a cache hit or miss
+
+> **This is your debugging tool.** If something isn't working, check the logs first. You'll see the exact error message and status code.
+
+---
+
+## Billing
+
+Manage your subscription and payment:
+
+- **Current plan** --- Which plan you're on (Charon BYOK or Achilles Managed)
+- **Usage this period** --- How much of your quota you've used
+- **Payment method** --- Your credit card on file
+- **Invoices** --- Download past invoices
+
+---
+
+## Alerts
+
+Set up notifications so you know when something important happens:
+
+| Alert type | What it does |
+|---|---|
+| **Budget warning** | Notifies you when you've used 80% of your monthly budget |
+| **Budget exceeded** | Notifies you when your budget is fully used |
+| **Error spike** | Notifies you when error rates go above a threshold |
+| **Latency spike** | Notifies you when response times are unusually high |
+
+Alerts can be sent via **email** or **Slack**.

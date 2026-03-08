@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "styx-gateway"
+version = "0.1.0"
+description = "Styx MCP server — connect any AI tool to every model provider"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Styx AI", email = "hello@styx.sh"}
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "ai-gateway",
+    "openai",
+    "anthropic",
+    "claude",
+    "cursor",
+    "windsurf",
+    "llm",
+    "styx"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://styx.sh"
+Documentation = "https://docs.styx.sh/docs/mcp-server"
+Repository = "https://github.com/styx-ai/styx-mcp-server"
+
+[project.scripts]
+styx-mcp = "styx_gateway.cli:main"

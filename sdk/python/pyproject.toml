@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "styx"
+version = "1.0.0"
+description = "Official Python SDK for Styx, extending the OpenAI SDK."
+authors = ["Styx <hello@styx.com>"]
+readme = "README.md"
+packages = [{include = "styx"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+openai = "^1.12.0"
+httpx = ">=0.24.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

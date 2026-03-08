@@ -1,0 +1,17 @@
+{{- if .Values.classifier.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "styx.fullname" . }}-classifier
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "classifier") | nindent 4 }}
+spec:
+  type: {{ .Values.classifier.service.type | default "ClusterIP" }}
+  ports:
+    - name: http
+      port: {{ .Values.classifier.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "styx.selectorLabels" (dict "root" . "component" "classifier") | nindent 4 }}
+{{- end }}

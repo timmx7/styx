@@ -1,0 +1,58 @@
+{{/*
+══════════════════════════════════════════════════════════════════════
+Database Migration Job — runs Alembic upgrade before backend starts.
+
+Uses a Helm hook to run BEFORE the backend Deployment rolls out.
+The hook-weight ensures it runs after the Secret is created.
+══════════════════════════════════════════════════════════════════════
+*/}}
+{{- if .Values.migration.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "styx.fullname" . }}-migration-{{ .Release.Revision }}
+  labels:
+    {{- include "styx.componentLabels" (dict "root" . "component" "migration") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        {{- include "styx.componentLabels" (dict "root" . "component" "migration") | nindent 8 }}
+    spec:
+      {{- include "styx.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "styx.podSecurityContext" . | nindent 8 }}
+      restartPolicy: Never
+      initContainers:
+        {{- if .Values.postgresql.enabled }}
+        - name: wait-for-postgres
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          command: ['sh', '-c', 'until pg_isready -h {{ include "styx.fullname" . }}-postgresql -p {{ .Values.postgresql.service.port }} -U {{ .Values.postgresql.auth.username }}; do echo "Waiting for PostgreSQL..."; sleep 2; done']
+        {{- end }}
+      containers:
+        - name: migrate
+          image: {{ include "styx.image" (dict "root" . "image" .Values.migration.image) }}
+          imagePullPolicy: {{ .Values.migration.image.pullPolicy }}
+          securityContext:
+            {{- include "styx.securityContext" . | nindent 12 }}
+          command: ["alembic", "upgrade", "head"]
+          workingDir: /app
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "styx.secretName" . }}
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: {{ include "styx.postgresUrl" . | quote }}
+          {{- with .Values.migration.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

@@ -1,0 +1,57 @@
+{{/*
+══════════════════════════════════════════════════════════════════════
+Let's Encrypt ClusterIssuers — automated TLS certificates via ACME.
+
+Deux issuers sont créés :
+  1. letsencrypt-staging  → pour tester (pas de rate limit, certificats
+                             non reconnus par les navigateurs)
+  2. letsencrypt-prod     → certificats de confiance, rate-limité
+                             (50 certificats/semaine/domaine)
+
+Le challenge HTTP-01 est utilisé : cert-manager crée un pod temporaire
+qui répond au challenge ACME via l'Ingress Controller.
+
+Prérequis : cert-manager CRDs installées dans le cluster.
+══════════════════════════════════════════════════════════════════════
+*/}}
+{{- if .Values.certManager.clusterIssuers.enabled }}
+{{- if not .Values.certManager.clusterIssuers.email }}
+{{- fail "certManager.clusterIssuers.email is REQUIRED for Let's Encrypt (ACME registration)" }}
+{{- end }}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  labels:
+    {{- include "styx.labels" . | nindent 4 }}
+spec:
+  acme:
+    # Serveur ACME staging — pas de rate limit, pour les tests
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: {{ .Values.certManager.clusterIssuers.email | quote }}
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: {{ .Values.certManager.clusterIssuers.ingressClass | quote }}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    {{- include "styx.labels" . | nindent 4 }}
+spec:
+  acme:
+    # Serveur ACME production — certificats de confiance
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: {{ .Values.certManager.clusterIssuers.email | quote }}
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: {{ .Values.certManager.clusterIssuers.ingressClass | quote }}
+{{- end }}

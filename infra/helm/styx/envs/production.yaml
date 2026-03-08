@@ -1,0 +1,286 @@
+# ══════════════════════════════════════════════════════════════════════
+# Production environment — high availability, autoscaling, full security
+# Usage: helm install styx . -f envs/production.yaml \
+#          --set secrets.jwtSecret=$(openssl rand -base64 32) \
+#          --set secrets.internalSecret=$(openssl rand -base64 32) \
+#          --set secrets.apiKeyHmacSecret=$(openssl rand -base64 32) \
+#          --set secrets.postgresPassword=$(openssl rand -base64 32) \
+#          --set secrets.openaiApiKey=sk-... \
+#          --set secrets.anthropicApiKey=sk-ant-...
+#
+# CRITICAL: In production, replace this Secret with External Secrets
+#           Operator or Sealed Secrets for proper secret management.
+# ══════════════════════════════════════════════════════════════════════
+
+# ---------------------------------------------------------------------------
+# Router — the hot path; scale aggressively
+# ---------------------------------------------------------------------------
+router:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 500m
+      memory: 256Mi
+    limits:
+      cpu: "2"
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 70
+  pdb:
+    enabled: true
+    minAvailable: 2
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: router
+            topologyKey: kubernetes.io/hostname
+
+# ---------------------------------------------------------------------------
+# Backend — business logic; moderate scale
+# ---------------------------------------------------------------------------
+backend:
+  replicaCount: 3
+  debug: false
+  corsOrigins: "https://styx.ai,https://www.styx.ai"
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 12
+    targetCPUUtilizationPercentage: 70
+  pdb:
+    enabled: true
+    minAvailable: 2
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: backend
+            topologyKey: kubernetes.io/hostname
+
+# ---------------------------------------------------------------------------
+# Classifier — ML inference; moderate scale
+# ---------------------------------------------------------------------------
+classifier:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 75
+
+# ---------------------------------------------------------------------------
+# Cache Service — embedding computation; memory-heavy
+# ---------------------------------------------------------------------------
+cacheService:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+# ---------------------------------------------------------------------------
+# Dashboard — read-heavy, lightweight
+# ---------------------------------------------------------------------------
+dashboard:
+  replicaCount: 2
+  publicApiUrl: "https://styx.ai"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 80
+
+# ---------------------------------------------------------------------------
+# Databases — production sizing
+# ---------------------------------------------------------------------------
+postgresql:
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: "gp3"        # AWS EBS gp3 (or equivalent)
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      cpu: "4"
+      memory: 4Gi
+
+redis:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: "gp3"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+qdrant:
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: "gp3"
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi
+
+clickhouse:
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: "gp3"
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      cpu: "4"
+      memory: 8Gi
+
+# ---------------------------------------------------------------------------
+# Ingress — TLS termination with cert-manager
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    # Let's Encrypt PRODUCTION — certificats de confiance
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Rate limiting au niveau Ingress
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    # Les annotations TLS/HSTS/timeout/streaming sont ajoutées
+    # automatiquement par le template Ingress quand TLS est activé.
+  hosts:
+    - host: api.styx.ai
+      paths:
+        - path: /v1
+          pathType: Prefix
+          service: router
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: dashboard
+  tls:
+    - secretName: styx-prod-tls
+      hosts:
+        - api.styx.ai
+
+# -- Let's Encrypt — ClusterIssuers
+# CRITICAL: --set certManager.clusterIssuers.email=infra@styx.ai
+certManager:
+  enabled: false       # cert-manager en production est souvent cluster-wide
+  clusterIssuers:
+    enabled: true
+    email: ""          # OBLIGATOIRE — passer via --set
+    ingressClass: nginx
+
+# ---------------------------------------------------------------------------
+# Security & observability
+# ---------------------------------------------------------------------------
+networkPolicies:
+  enabled: true
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  labels:
+    release: prometheus      # match your Prometheus Operator selector
+
+# ---------------------------------------------------------------------------
+# Monitoring — full observability stack
+# ---------------------------------------------------------------------------
+monitoring:
+  enabled: true
+  dashboards:
+    enabled: true
+  alertingRules:
+    enabled: true
+  grafana:
+    enabled: true
+    # CRITICAL: Override via --set grafana.adminPassword=YOUR_SECRET
+    # adminPassword must be provided at deploy time — no default.
+    persistence:
+      enabled: true
+      size: 5Gi
+    grafana.ini:
+      server:
+        root_url: "https://api.styx.ai/grafana/"
+        serve_from_sub_path: true
+  prometheus:
+    prometheusSpec:
+      retention: 30d
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: "2"
+          memory: 4Gi
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: gp3
+            resources:
+              requests:
+                storage: 50Gi
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: gp3
+            resources:
+              requests:
+                storage: 5Gi
