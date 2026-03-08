@@ -10,6 +10,7 @@ import (
 
 	"github.com/styx/router/internal/config"
 	"github.com/styx/router/internal/fallback"
+	"github.com/styx/router/internal/pricing"
 	"github.com/styx/router/internal/providers"
 )
 
@@ -30,6 +31,7 @@ type SmartRouter struct {
 	unavailableModels map[string]string             // model name → provider name (configured but not initialized)
 	lb                *LoadBalancer                 // distributes requests across providers
 	re                *RuleEngine                   // evaluates per-project routing rules
+	pricingMgr        *pricing.Manager              // live per-model cost data
 }
 
 // New creates a SmartRouter from the loaded config and initialized providers.
@@ -552,12 +554,27 @@ func (r *SmartRouter) passthroughProvider(modelName string, allowedProviders []s
 
 // ─── Model listing ────────────────────────────────────────────────────────────
 
+// ModelPricing exposes per-model cost in USD per 1M tokens.
+type ModelPricing struct {
+	InputPerMillion  float64 `json:"input_per_million"`
+	OutputPerMillion float64 `json:"output_per_million"`
+	Currency         string  `json:"currency"` // always "USD"
+}
+
 // ModelInfo describes a model known to the router, used for the /v1/models response.
 type ModelInfo struct {
-	ID        string `json:"id"`
-	Provider  string `json:"provider"`
-	Tier      string `json:"tier,omitempty"`
-	Available bool   `json:"available"`
+	ID        string        `json:"id"`
+	Provider  string        `json:"provider"`
+	Tier      string        `json:"tier,omitempty"`
+	Available bool          `json:"available"`
+	Pricing   *ModelPricing `json:"pricing,omitempty"`
+}
+
+// SetPricingManager injects a live pricing manager into the router.
+func (r *SmartRouter) SetPricingManager(m *pricing.Manager) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.pricingMgr = m
 }
 
 // ListModels returns all models the router knows about:
@@ -574,19 +591,39 @@ func (r *SmartRouter) ListModels() []ModelInfo {
 	models := make([]ModelInfo, 0, len(r.modelMap)+len(r.unavailableModels))
 
 	for name, entry := range r.modelMap {
-		models = append(models, ModelInfo{
+		info := ModelInfo{
 			ID:        name,
 			Provider:  entry.Provider.Name(),
 			Tier:      entry.Tier,
 			Available: entry.Provider.IsHealthy(),
-		})
+		}
+		if r.pricingMgr != nil {
+			if p, ok := r.pricingMgr.Get(name); ok {
+				info.Pricing = &ModelPricing{
+					InputPerMillion:  p.InputPerMillion,
+					OutputPerMillion: p.OutputPerMillion,
+					Currency:         "USD",
+				}
+			}
+		}
+		models = append(models, info)
 	}
 	for name, provName := range r.unavailableModels {
-		models = append(models, ModelInfo{
+		info := ModelInfo{
 			ID:        name,
 			Provider:  provName,
 			Available: false,
-		})
+		}
+		if r.pricingMgr != nil {
+			if p, ok := r.pricingMgr.Get(name); ok {
+				info.Pricing = &ModelPricing{
+					InputPerMillion:  p.InputPerMillion,
+					OutputPerMillion: p.OutputPerMillion,
+					Currency:         "USD",
+				}
+			}
+		}
+		models = append(models, info)
 	}
 
 	return models

@@ -19,6 +19,7 @@ import (
 	"github.com/styx/router/internal/config"
 	"github.com/styx/router/internal/fallback"
 	"github.com/styx/router/internal/metrics"
+	"github.com/styx/router/internal/pricing"
 	"github.com/styx/router/internal/providers"
 	"github.com/styx/router/internal/proxy"
 	"github.com/styx/router/internal/ratelimit"
@@ -163,6 +164,21 @@ func main() {
 	// ─── Initialize smart router ─────────────────────────────────
 	smartRouter := router.New(providerMap, cfg.Providers, loadBalancer, ruleEngine)
 
+	// ─── Initialize pricing manager ──────────────────────────────
+	pricingPath := os.Getenv("PRICING_PATH")
+	if pricingPath == "" {
+		pricingPath = "config/model_pricing.json"
+	}
+	pricingMgr, err := pricing.New(pricingPath)
+	if err != nil {
+		slog.Warn("pricing manager init failed — costs will be unavailable", "error", err)
+	} else {
+		smartRouter.SetPricingManager(pricingMgr)
+		// Refresh every 24 h; goroutine shuts down when ctx is cancelled.
+		pricingMgr.StartRefresher(context.Background(), 24*time.Hour)
+		slog.Info("pricing manager started", "path", pricingPath)
+	}
+
 	// ─── Initialize classifier client ────────────────────────────
 	classifierURL := cfg.Classifier.URL
 	classifierClient := classifier.NewClient(classifierURL, cfg.Classifier.TimeoutSeconds)
@@ -244,13 +260,19 @@ func main() {
 	// Returns all explicitly configured models plus passthrough note.
 	// More specific than /v1/ so it takes precedence in Go 1.22+ ServeMux.
 	mux.Handle("GET /v1/models", keyValidator.Middleware(publicLimiter.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		type pricingObj struct {
+			InputPerMillion  float64 `json:"input_per_million"`
+			OutputPerMillion float64 `json:"output_per_million"`
+			Currency         string  `json:"currency"`
+		}
 		type modelObj struct {
-			ID        string `json:"id"`
-			Object    string `json:"object"`
-			OwnedBy   string `json:"owned_by"`
-			Provider  string `json:"provider"`
-			Tier      string `json:"tier,omitempty"`
-			Available bool   `json:"available"`
+			ID        string      `json:"id"`
+			Object    string      `json:"object"`
+			OwnedBy   string      `json:"owned_by"`
+			Provider  string      `json:"provider"`
+			Tier      string      `json:"tier,omitempty"`
+			Available bool        `json:"available"`
+			Pricing   *pricingObj `json:"pricing,omitempty"`
 		}
 
 		models := smartRouter.ListModels()
@@ -268,7 +290,7 @@ func main() {
 
 		data := make([]modelObj, len(models))
 		for i, m := range models {
-			data[i] = modelObj{
+			obj := modelObj{
 				ID:        m.ID,
 				Object:    "model",
 				OwnedBy:   m.Provider,
@@ -276,12 +298,20 @@ func main() {
 				Tier:      m.Tier,
 				Available: m.Available,
 			}
+			if m.Pricing != nil {
+				obj.Pricing = &pricingObj{
+					InputPerMillion:  m.Pricing.InputPerMillion,
+					OutputPerMillion: m.Pricing.OutputPerMillion,
+					Currency:         m.Pricing.Currency,
+				}
+			}
+			data[i] = obj
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"object":     "list",
-			"data":       data,
+			"object":      "list",
+			"data":        data,
 			"passthrough": "Models with prefixes gpt-*, o1*/o3*/o4*, claude-*, gemini-*, mistral-*/codestral-* are auto-routed even if not listed here.",
 		})
 	}))))

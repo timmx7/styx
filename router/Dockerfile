@@ -21,6 +21,7 @@ WORKDIR /app
 
 COPY --from=builder --chown=appuser:appuser /styx-router .
 COPY --chown=appuser:appuser config/config.yaml ./config/config.yaml
+COPY --chown=appuser:appuser config/model_pricing.json ./config/model_pricing.json
 
 # Security: run as non-root user
 USER appuser
