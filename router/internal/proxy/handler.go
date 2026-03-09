@@ -450,6 +450,49 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		endUserID = ""
 	}
 
+	// ─── styx:auto Intelligent Routing ───────────────────────────────────────
+	// Detect virtual styx:* model names and resolve to a real provider+model
+	// before any caching or forwarding. Runs entirely in-process.
+	var autoRouteOriginal string
+	var autoRouteTier string
+	var autoRouteScore int
+	if forcedTier, ok := IsAutoModel(reqBody.Model); ok {
+		autoRouteOriginal = reqBody.Model
+		tier := forcedTier
+		if tier == "" { // styx:auto → score request complexity
+			autoRouteScore, tier = ScoreRequest(body)
+		}
+		autoRouteTier = tier
+
+		var allowedProviders []string
+		if keyInfo != nil {
+			allowedProviders = keyInfo.AllowedProviders
+		}
+		_, realModel, pickErr := h.router.PickTier(tier, allowedProviders, nil)
+		if pickErr != nil {
+			slog.Warn("styx:auto tier pick failed",
+				"request_id", requestID,
+				"virtual_model", autoRouteOriginal,
+				"tier", tier,
+				"error", pickErr,
+			)
+			writeError(w, http.StatusServiceUnavailable, "provider_not_configured",
+				fmt.Sprintf("No healthy provider available for tier %q (virtual model %q)", tier, autoRouteOriginal))
+			return
+		}
+
+		body = rewriteModel(body, realModel)
+		reqBody.Model = realModel
+
+		slog.Info("styx:auto resolved",
+			"request_id", requestID,
+			"virtual_model", autoRouteOriginal,
+			"resolved_model", realModel,
+			"tier", tier,
+			"score", autoRouteScore,
+		)
+	}
+
 	// Extract prompt text for classifier and cache
 	promptText := extractPrompt(body)
 	hasSystemPrompt := strings.Contains(string(body), `"role":"system"`) ||
@@ -877,6 +920,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Styx-Complexity", complexity)
 	w.Header().Set("X-Styx-Latency-Ms", fmt.Sprintf("%d", proxyResp.LatencyMs))
 	w.Header().Set("X-Styx-Cache", "MISS")
+	if autoRouteTier != "" {
+		w.Header().Set("X-Styx-Auto-Original", autoRouteOriginal)
+		w.Header().Set("X-Styx-Auto-Tier", autoRouteTier)
+		w.Header().Set("X-Styx-Auto-Score", fmt.Sprintf("%d", autoRouteScore))
+	}
 
 	// Copy response headers to client, filtering sensitive provider headers
 	copyHeaders(w.Header(), proxyResp.Headers)

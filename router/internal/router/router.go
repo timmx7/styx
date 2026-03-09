@@ -626,5 +626,22 @@ func (r *SmartRouter) ListModels() []ModelInfo {
 		models = append(models, info)
 	}
 
+	// Append the four virtual styx:* models so clients discover them via /v1/models.
+	virtual := []ModelInfo{
+		{ID: "styx:auto", Provider: "styx", Tier: "auto", Available: true},
+		{ID: "styx:fast", Provider: "styx", Tier: "light", Available: true},
+		{ID: "styx:balanced", Provider: "styx", Tier: "medium", Available: true},
+		{ID: "styx:frontier", Provider: "styx", Tier: "heavy", Available: true},
+	}
+	models = append(models, virtual...)
+
 	return models
+}
+
+// PickTier is the exported counterpart of pickFromTier, used by the proxy handler
+// to resolve a virtual styx:* model to a real provider+model pair.
+func (r *SmartRouter) PickTier(tier string, allowedProviders []string, rule *RoutingRule) (providers.Provider, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.pickFromTier(tier, allowedProviders, rule)
 }

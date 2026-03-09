@@ -36,6 +36,7 @@ response = client.chat.completions.create(
 
 - 🔌 **MCP Native** — Built-in MCP server. Connect Claude Code or Cursor in one command
 - 🔀 **Universal Routing** — One OpenAI-compatible endpoint for all providers
+- 🤖 **styx:auto** — Intelligent model routing: use `"model": "styx:auto"` and let Styx pick the right model based on request complexity
 - 🔑 **BYOK** — Bring your own API keys, encrypted at rest (Fernet/AES)
 - 📊 **Dashboard** — Track requests, costs, latency per project and model
 - 🔄 **Fallbacks** — Auto-failover between providers with circuit breakers
