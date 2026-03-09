@@ -11,14 +11,13 @@ import hmac as hmac_mod
 import logging
 from datetime import datetime, timezone
 
-import jwt as pyjwt
 from fastapi import APIRouter, Depends, HTTPException, Header, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.db.database import get_db
-from app.deps import get_current_user, _decode_supabase_jwt, is_token_blacklisted, blacklist_token
+from app.deps import get_current_user, _decode_supabase_jwt, blacklist_token
 from app.models.user import User
 from app.schemas import UserResponse
 from app.schemas_billing import SetBillingModeRequest

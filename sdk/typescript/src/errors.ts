@@ -48,7 +48,7 @@ export class RateLimitError extends StyxError {
 
 export class BudgetExceededError extends StyxError {
   constructor(message = "Monthly budget exceeded") {
-    super(message, 402, "budget_exceeded");
+    super(message, 429, "budget_exceeded");
     this.name = "BudgetExceededError";
   }
 }

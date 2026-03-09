@@ -2,10 +2,8 @@
 
 from datetime import datetime, timedelta, timezone
 
-import json
 
 from fastapi import APIRouter, Depends, Query, HTTPException
-from fastapi.responses import StreamingResponse
 from sqlalchemy import case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

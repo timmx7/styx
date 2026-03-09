@@ -2,10 +2,8 @@
 """Train the classifier model and save it for the service to load."""
 
 import pickle
-import sys
 from pathlib import Path
 
-import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import cross_val_score
