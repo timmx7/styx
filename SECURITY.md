@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in Styx, please report it responsibly:
 
-**Email**: security@styx.app
+**Email**: 264233289+timmx7@users.noreply.github.com
 
 Please do **NOT** open a public GitHub issue for security vulnerabilities.
 
