@@ -329,6 +329,58 @@ Standard OpenAI chat completions format.
 
 **Supported models:** Any model name recognized by the configured providers. The router also auto-routes by prefix for unconfigured models: `gpt-*` / `o1*` / `o3*` / `o4*` → OpenAI, `claude-*` → Anthropic, `gemini-*` → Google, `mistral-*` / `codestral-*` → Mistral.
 
+**Response headers (always present):**
+
+| Header | Example | Description |
+|--------|---------|-------------|
+| `X-Styx-Provider` | `openai` | Provider that served the request |
+| `X-Styx-Model` | `gpt-4o-mini` | Exact model used |
+| `X-Styx-Complexity` | `simple` | ML complexity classification |
+| `X-Styx-Latency-Ms` | `423` | Total proxy latency in ms |
+| `X-Styx-Cache` | `HIT` or `MISS` | Whether semantic cache was used |
+
+---
+
+### Smart Models (styx:auto) {#smart-models-styxauto}
+
+Use a virtual model name to let Styx choose the right real model automatically.
+
+| Virtual model | Behavior |
+|---------------|----------|
+| `styx:auto` | Scores the request with 9 complexity signals and picks the appropriate tier |
+| `styx:fast` | Always routes to the cheapest, fastest model (light tier) |
+| `styx:balanced` | Always routes to a balanced model (medium tier) |
+| `styx:frontier` | Always routes to the most powerful model (heavy tier) |
+
+**Example:**
+```json
+{ "model": "styx:auto", "messages": [{"role": "user", "content": "What is 2+2?"}] }
+```
+
+**Additional response headers for styx:* requests:**
+
+| Header | Example | Description |
+|--------|---------|-------------|
+| `X-Styx-Auto-Original` | `styx:auto` | The virtual model name requested |
+| `X-Styx-Auto-Tier` | `light` | Resolved tier (light / medium / heavy) |
+| `X-Styx-Auto-Score` | `5` | Complexity score 0–100 |
+
+**9-signal complexity scorer (styx:auto):**
+
+1. **Body size** — raw request byte length as token proxy (≥8KB → +30, ≥2KB → +15)
+2. **Multi-turn** — more than 3 messages → +20
+3. **System prompt** — presence of a system role message → +10
+4. **Code keywords** — `def`, `class`, `function`, `import`, `algorithm`, etc. → +15
+5. **Math/reasoning** — `prove`, `solve`, `equation`, `theorem`, `integral`, etc. → +15
+6. **Structured output** — `response_format.type = json_object` or `schema` → +10
+7. **Long output** — `max_tokens ≥ 2000` → +15, `≥ 1000` → +8
+8. **Complexity signals** — `step by step`, `detailed`, `comprehensive`, etc. → +10
+9. **Question depth** — 3 or more `?` in the prompt → +5
+
+Score bands: 0–29 → light · 30–59 → medium · 60–100 → heavy
+
+---
+
 ### GET /v1/models
 List all configured models plus auto-routable passthrough models. Returns an OpenAI-compatible response.
 

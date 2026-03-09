@@ -843,15 +843,30 @@ func TestListModels_ReturnsAllConfiguredModels(t *testing.T) {
 
 	models := r.ListModels()
 
-	// Should have 6 models (2 OpenAI + 2 Anthropic + 2 Google from defaultProviders)
-	if len(models) != 6 {
-		t.Errorf("expected 6 models from ListModels, got %d", len(models))
+	// Should have 10 models: 6 real (2 OpenAI + 2 Anthropic + 2 Google) + 4 virtual styx:*
+	if len(models) != 10 {
+		t.Errorf("expected 10 models from ListModels (6 real + 4 virtual styx:*), got %d", len(models))
 	}
 
-	// All should be available (defaultProviders are all healthy)
+	// All should be available (defaultProviders are all healthy, virtual models always available)
 	for _, m := range models {
 		if !m.Available {
 			t.Errorf("model %s should be available, got Available=false", m.ID)
+		}
+	}
+
+	// Virtual styx:* models should be present
+	virtualIDs := map[string]bool{
+		"styx:auto": false, "styx:fast": false, "styx:balanced": false, "styx:frontier": false,
+	}
+	for _, m := range models {
+		if _, ok := virtualIDs[m.ID]; ok {
+			virtualIDs[m.ID] = true
+		}
+	}
+	for id, found := range virtualIDs {
+		if !found {
+			t.Errorf("virtual model %q missing from ListModels", id)
 		}
 	}
 }
@@ -878,14 +893,17 @@ func TestListModels_IncludesUnavailableModels(t *testing.T) {
 	r := buildTestRouter(provMap, cfgMap)
 	models := r.ListModels()
 
-	// Should have 2 models total: 1 available + 1 unavailable
-	if len(models) != 2 {
-		t.Errorf("expected 2 models (1 available + 1 unavailable), got %d", len(models))
+	// Should have 6 models total: 1 real available + 1 real unavailable + 4 virtual styx:*
+	if len(models) != 6 {
+		t.Errorf("expected 6 models (1 available + 1 unavailable + 4 virtual), got %d", len(models))
 	}
 
 	available := 0
 	unavailable := 0
 	for _, m := range models {
+		if m.Provider == "styx" {
+			continue // virtual models always available, skip from count
+		}
 		if m.Available {
 			available++
 		} else {
@@ -893,10 +911,10 @@ func TestListModels_IncludesUnavailableModels(t *testing.T) {
 		}
 	}
 	if available != 1 {
-		t.Errorf("expected 1 available model, got %d", available)
+		t.Errorf("expected 1 real available model, got %d", available)
 	}
 	if unavailable != 1 {
-		t.Errorf("expected 1 unavailable model, got %d", unavailable)
+		t.Errorf("expected 1 real unavailable model, got %d", unavailable)
 	}
 }
 
@@ -913,11 +931,19 @@ func TestListModels_UnavailableHasProviderName(t *testing.T) {
 	r := buildTestRouter(provMap, cfgMap)
 	models := r.ListModels()
 
-	if len(models) != 1 {
-		t.Fatalf("expected 1 model, got %d", len(models))
+	// 1 real unavailable model + 4 virtual styx:* models
+	if len(models) != 5 {
+		t.Fatalf("expected 5 models (1 real + 4 virtual), got %d", len(models))
 	}
 
-	m := models[0]
+	// Find the real model (non-virtual)
+	var m ModelInfo
+	for _, info := range models {
+		if info.Provider != "styx" {
+			m = info
+			break
+		}
+	}
 	if m.ID != "gpt-4o" {
 		t.Errorf("ID = %q, want 'gpt-4o'", m.ID)
 	}

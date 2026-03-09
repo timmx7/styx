@@ -175,6 +175,39 @@ curl ... -d '{"model": "gemini-2.0-flash", ...}'
 curl ... -d '{"model": "mistral-large-latest", ...}'
 ```
 
+## Step 7: Let Styx Choose for You (styx:auto)
+
+Don't want to think about which model to use? Use one of Styx's virtual smart models:
+
+| Virtual model | Behavior |
+|---------------|----------|
+| `styx:auto` | Scores request complexity with 9 signals and picks the right tier automatically |
+| `styx:fast` | Always uses the cheapest, fastest model (light tier) |
+| `styx:balanced` | Always uses a balanced model (medium tier) |
+| `styx:frontier` | Always uses the most powerful model (heavy tier) |
+
+```bash
+# Let Styx decide — "Hi" → light model, "Prove the Riemann hypothesis" → heavy model
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "styx:auto",
+    "messages": [{"role": "user", "content": "What is 2+2?"}]
+  }'
+```
+
+The response includes extra headers explaining the decision:
+
+```
+X-Styx-Auto-Original: styx:auto
+X-Styx-Auto-Tier:     light
+X-Styx-Auto-Score:    5
+X-Styx-Model:         gpt-4.1-nano
+X-Styx-Provider:      openai
+```
+
+See the [API Reference](./api-reference.md#smart-models-styxauto) for details on all 9 complexity signals.
+
 ## What Happens Behind the Scenes
 
 1. The Go router receives your request on `:8080`
