@@ -523,7 +523,6 @@ async def test_billing_service_mock_invoices():
 @pytest.mark.asyncio
 async def test_mock_mode_checkout_returns_redirect(client, auth_headers):
     """In mock mode, create-checkout should return a redirect URL, not crash."""
-    from app.config import settings
     # Ensure billing_mode is set
     resp = await client.patch(
         "/api/auth/me",

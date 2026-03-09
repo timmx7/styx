@@ -19,7 +19,6 @@ from app.models.user import User
 from app.schemas import BillingOverview, ChangePlanRequest, PlanInfo
 from app.schemas_billing import (
     ACHILLES_PLANS,
-    CHARON_PLANS,
     CreateCheckoutRequest,
     SubscriptionResponse,
     get_plan,

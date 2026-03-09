@@ -9,7 +9,6 @@ from datetime import datetime, timedelta, timezone
 
 import jwt as pyjwt
 import pytest
-import pytest_asyncio
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from httpx import AsyncClient

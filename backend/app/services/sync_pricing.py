@@ -10,7 +10,7 @@ import logging
 import httpx
 from decimal import Decimal
 
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from app.db.database import async_session
 from app.models.model_pricing import ModelPricing
 

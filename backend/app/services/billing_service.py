@@ -9,7 +9,6 @@ return mock data so the dashboard can be developed without Stripe.
 
 import asyncio
 import logging
-import os
 from datetime import datetime, timezone
 
 import stripe
