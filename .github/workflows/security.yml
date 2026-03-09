@@ -318,35 +318,35 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Lint backend Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: backend/Dockerfile
           ignore: DL3008,DL3018
           failure-threshold: warning
 
       - name: Lint router Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: router/Dockerfile
           ignore: DL3008,DL3018
           failure-threshold: warning
 
       - name: Lint dashboard Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: dashboard/Dockerfile
           ignore: DL3008,DL3018
           failure-threshold: warning
 
       - name: Lint classifier Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: classifier/Dockerfile
           ignore: DL3008,DL3018
           failure-threshold: warning
 
       - name: Lint cache-service Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: cache-service/Dockerfile
           ignore: DL3008,DL3018
