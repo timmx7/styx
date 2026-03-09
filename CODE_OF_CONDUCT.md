@@ -6,4 +6,4 @@ By participating in this project, you agree to abide by its terms.
 
 ## Reporting
 
-Report unacceptable behavior to: security@styx.app
+Report unacceptable behavior to: 264233289+timmx7@users.noreply.github.com
