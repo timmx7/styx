@@ -90,16 +90,15 @@ show_banner() {
   echo ""
   echo "${BOLD}${CYAN}"
   cat <<'BANNER'
-   _____ _______   ____  __
-  / ____|__   __| / __ \ \ \  / /
- | (___    | |   | |  | | \ \/ /
-  \___ \   | |   | |  | |  \  /
-  ____) |  | |   | |__| |  / /
- |_____/   |_|    \____/  /_/
+ _____   _____  __   __  __  __
+/ ___|  |_   _| \ \ / /  \ \/ /
+\___ \    | |    \ V /    >  <
+ ___) |   | |     | |    / /\ \
+|____/    |_|     |_|   /_/  \_\
 
 BANNER
   echo "${RESET}"
-  echo "${BOLD}  Welcome to the Styx Setup Wizard${RESET}"
+  echo "${BOLD}  🌊  Welcome to the Styx Setup Wizard${RESET}"
   echo "  ${DIM}The MCP-Native AI Gateway${RESET}"
   echo ""
   echo "  This wizard will generate your ${BOLD}.env${RESET} file and prepare"
