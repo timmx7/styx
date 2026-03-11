@@ -6,6 +6,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.mcpregistry_github_token
+.mcpregistry_registry_token
+mcp-publisher
 *.pem
 *.key
 *.p12
