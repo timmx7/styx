@@ -1,0 +1,51 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.timmx7/styx-mcp-server",
+  "description": "MCP server for Styx — intelligent AI routing across OpenAI, Anthropic, Google, and Mistral.",
+  "repository": {
+    "url": "https://github.com/timmx7/styx",
+    "source": "github",
+    "subfolder": "styx-mcp-server"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "styx-mcp-server",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "STYX_API_KEY",
+          "description": "Styx API key for routing AI requests through the gateway (required for styx_send_request)",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "STYX_TOKEN",
+          "description": "Styx auth token for project and key management (required for management tools)",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "STYX_API_URL",
+          "description": "Styx backend API URL",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "STYX_PROXY_URL",
+          "description": "Styx proxy URL for AI request routing",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
