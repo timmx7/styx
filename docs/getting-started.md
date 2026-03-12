@@ -231,13 +231,11 @@ Once the dashboard is running at `http://localhost:3000`, here is what each page
 | **Analytics** | `/analytics` | Request volume by day, provider distribution, model usage, latency trends. Filter by 7d / 30d / 90d. |
 | **Logs** | `/logs` | Per-request log: model, provider, latency, tokens, cost, cache hit. Useful for debugging routing decisions. |
 | **Routing** | `/routing` | Configure routing strategy per project: `cost_optimized`, `latency_first`, `quality_first`, or `round_robin`. Restrict which providers a project can use. |
-| **Settings** | `/settings` | Instance info (Instance ID for support), danger zone (reset), and notification preferences (coming soon). |
-| **Billing** | `/billing` | 🔒 Coming soon — Stripe integration for managed key usage. |
-| **Team** | `/team` | 🔒 Coming soon — invite team members, assign roles. |
-| **End-Users** | `/analytics/users` | 🔒 Coming soon — per end-user analytics when you pass `X-User-ID` in requests. |
-| **Alerts** | `/alerts` | 🔒 Coming soon — budget threshold alerts via email/Slack. |
-
-> Pages marked 🔒 are visible but blurred — they are planned features not yet functional in v1.
+| **Settings** | `/settings` | Instance info (Instance ID for support), danger zone (reset), and notification preferences. |
+| **Billing** | `/billing` | Stripe integration for managed key usage. |
+| **Team** | `/team` | Invite team members, assign roles. |
+| **End-Users** | `/analytics/users` | Per end-user analytics when you pass `X-User-ID` in requests. |
+| **Alerts** | `/alerts` | Budget threshold alerts via email/Slack. |
 
 ## Next Steps
 
