@@ -22,6 +22,7 @@ from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -112,7 +113,15 @@ async def _api_request(
 # Tool 1: Send AI Request
 # ═══════════════════════════════════════════════════════════════
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Route Chat Completion",
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    )
+)
 async def styx_send_request(
     messages: list[dict[str, str]],
     model: str = "",
@@ -180,7 +189,14 @@ async def styx_send_request(
 # Tool 2: List Projects
 # ═══════════════════════════════════════════════════════════════
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="List Projects",
+        readOnlyHint=True,
+        destructiveHint=False,
+        openWorldHint=False,
+    )
+)
 async def styx_list_projects() -> str:
     """List all projects for the authenticated user.
 
@@ -212,7 +228,15 @@ async def styx_list_projects() -> str:
 # Tool 3: Create Project
 # ═══════════════════════════════════════════════════════════════
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Create Project",
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=False,
+    )
+)
 async def styx_create_project(
     name: str,
     team_id: str,
@@ -253,7 +277,14 @@ async def styx_create_project(
 # Tool 4: List API Keys
 # ═══════════════════════════════════════════════════════════════
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="List API Keys",
+        readOnlyHint=True,
+        destructiveHint=False,
+        openWorldHint=False,
+    )
+)
 async def styx_list_api_keys() -> str:
     """List all API keys for the authenticated user.
 
@@ -283,7 +314,15 @@ async def styx_list_api_keys() -> str:
 # Tool 5: Create API Key
 # ═══════════════════════════════════════════════════════════════
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Create API Key",
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=False,
+    )
+)
 async def styx_create_api_key(
     project_id: str,
     name: str = "mcp-key",
@@ -327,7 +366,14 @@ async def styx_create_api_key(
 # Tool 6: Check Usage
 # ═══════════════════════════════════════════════════════════════
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Usage Statistics",
+        readOnlyHint=True,
+        destructiveHint=False,
+        openWorldHint=False,
+    )
+)
 async def styx_check_usage(
     days: int = 30,
 ) -> str:
@@ -378,7 +424,15 @@ async def styx_check_usage(
 # Tool 7: Manage Providers (BYOK keys)
 # ═══════════════════════════════════════════════════════════════
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Manage Provider Keys",
+        readOnlyHint=False,
+        destructiveHint=True,
+        idempotentHint=False,
+        openWorldHint=False,
+    )
+)
 async def styx_manage_providers(
     project_id: str,
     action: str = "list",
@@ -448,7 +502,14 @@ async def styx_manage_providers(
 # Tool 8: List Available Models
 # ═══════════════════════════════════════════════════════════════
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="List Available Models",
+        readOnlyHint=True,
+        destructiveHint=False,
+        openWorldHint=False,
+    )
+)
 async def styx_list_models() -> str:
     """List all AI models available through the Styx gateway.
 
@@ -506,7 +567,15 @@ async def styx_list_models() -> str:
 # Tool 9: Switch Default Model
 # ═══════════════════════════════════════════════════════════════
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Switch Default Model",
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    )
+)
 async def styx_switch_model(
     model: str,
 ) -> str:
