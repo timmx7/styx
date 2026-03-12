@@ -64,27 +64,6 @@ import { toast } from "sonner";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { WebhooksTab } from "@/components/team/WebhooksTab";
 
-function ComingSoonWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative min-h-[400px]">
-      <div className="pointer-events-none select-none blur-sm opacity-40">
-        {children}
-      </div>
-      <div className="absolute inset-0 flex items-start justify-center pt-28 z-10">
-        <div className="flex flex-col items-center gap-3 text-center bg-background/95 backdrop-blur-md border border-border rounded-2xl px-10 py-8 shadow-lg">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/8 border border-primary/20 mb-2">
-            <span className="text-2xl">🚀</span>
-          </div>
-          <h3 className="font-serif text-2xl font-semibold text-foreground">Coming Soon</h3>
-          <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-            Team management, roles, SSO, and webhooks are under active development and will ship in a future release.
-          </p>
-          <p className="text-xs text-muted-foreground/50 mt-1">Apache 2.0 · Open Source · Self-Hosted</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const roleBadge = (role: string) => {
   switch (role) {
@@ -311,7 +290,6 @@ export default function TeamPage() {
   };
 
   return (
-    <ComingSoonWrapper>
     <div className="space-y-8">
       <Breadcrumbs />
       {/* Header */}
@@ -784,6 +762,5 @@ export default function TeamPage() {
         </DialogContent>
       </Dialog>
     </div>
-    </ComingSoonWrapper>
   );
 }

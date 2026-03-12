@@ -71,15 +71,7 @@ export default function PricingPage() {
             </a>
           </div>
 
-          <p className="mt-8 text-[12px] font-mono text-muted-foreground">
-            Managed hosting coming soon →{" "}
-            <a
-              href="https://styx.app"
-              className="hover:text-foreground transition-colors underline underline-offset-4"
-            >
-              styx.app
-            </a>
-          </p>
+
         </motion.div>
       </section>
 

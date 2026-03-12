@@ -38,7 +38,7 @@ const columns = [
       { label: "Apache 2.0", href: `${GITHUB_URL}/blob/main/LICENSE` },
       { label: "Code of Conduct", href: `${GITHUB_URL}/blob/main/CODE_OF_CONDUCT.md` },
       { label: "Privacy", href: "/privacy" },
-      { label: "styx.app ↗", href: "https://styx.app" },
+
     ],
   },
 ];
