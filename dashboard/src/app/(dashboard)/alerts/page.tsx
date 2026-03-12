@@ -49,22 +49,6 @@ function severityBadge(severity: string) {
   }
 }
 
-function ComingSoonWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative">
-      <div className="pointer-events-none select-none blur-sm opacity-40">
-        {children}
-      </div>
-      <div className="absolute inset-0 flex items-center justify-center z-10">
-        <div className="text-center">
-          <span className="bg-indigo-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
-            🚀 Coming Soon
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -111,7 +95,6 @@ export default function AlertsPage() {
   }
 
   return (
-    <ComingSoonWrapper>
     <div className="space-y-6">
       <Breadcrumbs />
       {/* Header */}
@@ -280,6 +263,5 @@ export default function AlertsPage() {
         </div>
       )}
     </div>
-    </ComingSoonWrapper>
   );
 }

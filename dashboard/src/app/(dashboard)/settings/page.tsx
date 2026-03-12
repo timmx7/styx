@@ -32,7 +32,7 @@ export default function SettingsPage() {
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [copiedInstanceId, setCopiedInstanceId] = useState(false);
 
-  // Notification preferences coming soon — kept for UI preview in blur
+  // Notification preferences — UI preview (backend integration pending)
 
   useEffect(() => {
     if (user) {
@@ -261,62 +261,51 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Notification preferences section — Coming Soon */}
-        <div className="relative">
-          <div className="pointer-events-none select-none blur-[2px] opacity-40">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Bell className="h-5 w-5 text-primary" />
-                  <CardTitle>Notifications</CardTitle>
-                </div>
-                <CardDescription>
-                  Configure how you receive alerts and notifications.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Budget Alerts</p>
-                      <p className="text-xs text-muted-foreground">
-                        Receive email notifications when budget thresholds are reached.
-                      </p>
-                    </div>
-                    <input type="checkbox" checked={notifications.budgetAlerts} readOnly className="h-4 w-4 rounded border-border" />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Provider Outage Alerts</p>
-                      <p className="text-xs text-muted-foreground">
-                        Get notified when a provider goes down or recovers.
-                      </p>
-                    </div>
-                    <input type="checkbox" checked={notifications.downtime} readOnly className="h-4 w-4 rounded border-border" />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Weekly Report</p>
-                      <p className="text-xs text-muted-foreground">
-                        Receive a weekly summary of your API usage and costs.
-                      </p>
-                    </div>
-                    <input type="checkbox" checked={notifications.weeklyReports} readOnly className="h-4 w-4 rounded border-border" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <div className="flex items-center gap-2.5 bg-background/95 backdrop-blur-sm border border-border rounded-xl px-5 py-3 shadow-md">
-              <span className="text-base">🚀</span>
-              <span className="text-sm font-medium text-foreground">Coming Soon</span>
-              <span className="text-xs text-muted-foreground">— notification preferences</span>
+        {/* Notification preferences */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
+              <CardTitle>Notifications</CardTitle>
             </div>
-          </div>
-        </div>
+            <CardDescription>
+              Configure how you receive alerts and notifications.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Budget Alerts</p>
+                  <p className="text-xs text-muted-foreground">
+                    Receive email notifications when budget thresholds are reached.
+                  </p>
+                </div>
+                <input type="checkbox" checked={notifications.budgetAlerts} readOnly className="h-4 w-4 rounded border-border" />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Provider Outage Alerts</p>
+                  <p className="text-xs text-muted-foreground">
+                    Get notified when a provider goes down or recovers.
+                  </p>
+                </div>
+                <input type="checkbox" checked={notifications.downtime} readOnly className="h-4 w-4 rounded border-border" />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Weekly Report</p>
+                  <p className="text-xs text-muted-foreground">
+                    Receive a weekly summary of your API usage and costs.
+                  </p>
+                </div>
+                <input type="checkbox" checked={notifications.weeklyReports} readOnly className="h-4 w-4 rounded border-border" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </>
   );

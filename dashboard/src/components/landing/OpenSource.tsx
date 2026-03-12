@@ -112,16 +112,7 @@ export function OpenSource() {
           </Link>
         </motion.div>
 
-        {/* Managed hosting note */}
-        <p className="text-center text-sm mt-8 font-body text-muted-foreground opacity-60">
-          Managed hosting coming soon →{" "}
-          <a
-            href="https://styx.app"
-            className="hover:text-foreground transition-colors underline-offset-2 hover:underline"
-          >
-            styx.app
-          </a>
-        </p>
+
       </div>
     </section>
   );

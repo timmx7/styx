@@ -280,8 +280,3 @@ Apache 2.0 — see [LICENSE](LICENSE) for details.
 - [Security](SECURITY.md)
 - [Support](https://github.com/styx-hq/styx/issues)
 
-## Styx Cloud
-
-Want managed hosting with advanced analytics, team management, and SSO?
-
-→ [styx.app](https://styx.app)
