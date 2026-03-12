@@ -1,0 +1,14 @@
+{
+  "name": "styx",
+  "description": "MCP-native AI API gateway. Route, manage, and observe LLM traffic across providers with built-in MCP server support.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Styx HQ",
+    "url": "https://styxhq.com"
+  },
+  "homepage": "https://github.com/styx-hq/styx",
+  "repository": "https://github.com/styx-hq/styx",
+  "license": "Apache-2.0",
+  "keywords": ["ai-gateway", "mcp", "llm-proxy", "api-management", "openai", "anthropic", "model-context-protocol"],
+  "category": "infrastructure"
+}
