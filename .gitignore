@@ -87,6 +87,9 @@ AUDIT_REPORT.md
 CLEANUP.md
 SPRINT_REPORT.md
 
+# ─── Submission files (not for public repo) ─────────────────────
+_submission/
+
 # ─── Misc ────────────────────────────────────────────────────────
 *.log
 logs/

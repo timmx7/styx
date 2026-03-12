@@ -229,6 +229,43 @@ styx/
 | Circuit Breaker | ✅ | ❌ | ✅ | ✅ |
 | One-Command Install | ✅ | N/A | ❌ | N/A |
 
+## Claude Code Plugin
+
+Install the Styx plugin directly in Claude Code:
+
+```
+/plugin install styx@claude-plugin-directory
+```
+
+Or browse: `/plugin > Discover > styx`
+
+This gives you `/styx:setup`, `/styx:status`, and the `@styx-ops` agent for managing your gateway from Claude Code.
+
+## MCP Connector
+
+Styx includes a native MCP server. Connect it to Claude, Cursor, or any MCP-compatible client:
+
+**Claude Code:**
+```bash
+claude mcp add --transport http styx http://localhost:8080/mcp
+```
+
+**Claude Desktop / Claude.ai:** Add as a custom connector in Settings > Connectors with URL: `http://localhost:8080/mcp`
+
+## Examples
+
+### Check gateway health
+**Prompt:** "Check if my AI gateway is healthy and which providers are connected"
+→ Styx checks all provider connections, returns status and latency per provider, flags any issues.
+
+### Analyze spending
+**Prompt:** "How much have I spent on AI APIs this month?"
+→ Styx aggregates usage across providers, returns cost breakdown by model, shows cache savings.
+
+### Create a scoped API key
+**Prompt:** "Create an API key for the marketing team limited to 1000 requests/day"
+→ Styx generates a rate-limited key, returns the key and its configuration.
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -237,8 +274,14 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Apache 2.0 — see [LICENSE](LICENSE) for details.
 
+## Links
+
+- [Privacy Policy](privacy-policy.md)
+- [Security](SECURITY.md)
+- [Support](https://github.com/styx-hq/styx/issues)
+
 ## Styx Cloud
 
 Want managed hosting with advanced analytics, team management, and SSO?
 
-→ [styx.app](https://styx.app) (coming soon)
+→ [styx.app](https://styx.app)
