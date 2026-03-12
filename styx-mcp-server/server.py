@@ -194,6 +194,7 @@ async def styx_send_request(
         title="List Projects",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=False,
     )
 )
@@ -282,6 +283,7 @@ async def styx_create_project(
         title="List API Keys",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=False,
     )
 )
@@ -371,6 +373,7 @@ async def styx_create_api_key(
         title="Get Usage Statistics",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=False,
     )
 )
@@ -507,6 +510,7 @@ async def styx_manage_providers(
         title="List Available Models",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=False,
     )
 )
