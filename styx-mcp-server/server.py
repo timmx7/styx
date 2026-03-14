@@ -9,10 +9,14 @@ Configuration (environment variables):
     STYX_API_URL   — Backend URL (default: http://localhost:8000)
     STYX_API_KEY   — Your Styx API key (required for proxy tools)
     STYX_TOKEN     — Your Styx auth token (required for management tools)
+    MCP_TRANSPORT  — Transport mode: "stdio", "sse", or "http" (default: stdio)
+    MCP_PORT       — Port for HTTP/SSE transport (default: 8081 for HTTP, 8090 for SSE)
 
 Run:
     python server.py                     # stdio transport (default)
     python server.py --transport sse     # SSE transport on port 8090
+    python server.py --transport http    # Streamable HTTP on port 8081
+    MCP_TRANSPORT=http python server.py  # Same via env var
 """
 
 import contextvars
@@ -610,19 +614,54 @@ async def styx_switch_model(
 
 
 # ═══════════════════════════════════════════════════════════════
+# Streamable HTTP app factory (for CORS + remote access)
+# ═══════════════════════════════════════════════════════════════
+
+def create_http_app():
+    """Create a CORS-wrapped MCP app for remote access.
+
+    Wraps the SDK's streamable_http_app() directly with CORSMiddleware.
+    CORSMiddleware is pure ASGI middleware — it passes through lifespan
+    events unchanged, so the SDK's session manager initializes correctly.
+    """
+    from starlette.middleware.cors import CORSMiddleware
+
+    mcp_app = mcp.streamable_http_app()
+
+    return CORSMiddleware(
+        mcp_app,
+        allow_origins=[
+            "https://claude.ai",
+            "https://claude.com",
+            "https://app.styxhq.com",
+            "http://localhost:3000",
+        ],
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "Mcp-Session-Id"],
+        expose_headers=["Mcp-Session-Id"],
+    )
+
+
+# ═══════════════════════════════════════════════════════════════
 # Entry point
 # ═══════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     import sys
 
-    transport = "stdio"
+    transport = os.getenv("MCP_TRANSPORT", "stdio")
     if "--transport" in sys.argv:
         idx = sys.argv.index("--transport")
         if idx + 1 < len(sys.argv):
             transport = sys.argv[idx + 1]
 
-    if transport == "sse":
+    if transport == "http":
+        import uvicorn
+
+        port = int(os.getenv("MCP_PORT", "8081"))
+        print(f"Starting Styx MCP server (streamable-http) on 0.0.0.0:{port}/mcp")
+        uvicorn.run(create_http_app(), host="0.0.0.0", port=port)
+    elif transport == "sse":
         mcp.run(transport="sse")
     else:
         mcp.run(transport="stdio")

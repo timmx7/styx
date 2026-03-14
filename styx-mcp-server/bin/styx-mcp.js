@@ -12,12 +12,15 @@ if (process.argv.includes("--help") || process.argv.includes("-h")) {
 Usage:
   npx styx-mcp-server               stdio transport (default — for Claude Code, Cursor, Windsurf)
   npx styx-mcp-server --sse         SSE transport on port 8090
+  npx styx-mcp-server --http        Streamable HTTP on port 8081 (for remote access)
 
 Environment variables:
   STYX_API_URL    Backend API URL   (default: http://localhost:8000)
   STYX_PROXY_URL  Proxy URL         (default: http://localhost:8080)
   STYX_API_KEY    API key for proxy requests (required for styx_send_request)
   STYX_TOKEN      Auth token for management tools (required for project/key tools)
+  MCP_TRANSPORT   Transport mode: stdio, sse, http (default: stdio)
+  MCP_PORT        Port for HTTP transport (default: 8081)
 
 MCP tools:
   styx_send_request      Route AI requests through the gateway
@@ -42,7 +45,9 @@ Docs: https://github.com/timmx7/styx`);
 const pythonCmd = process.platform === "win32" ? "python" : "python3";
 
 const pythonArgs = [SERVER_PY];
-if (process.argv.includes("--sse")) {
+if (process.argv.includes("--http")) {
+  pythonArgs.push("--transport", "http");
+} else if (process.argv.includes("--sse")) {
   pythonArgs.push("--transport", "sse");
 }
 
