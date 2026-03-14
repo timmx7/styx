@@ -464,6 +464,7 @@ services:
       com.styx.role: "monitoring"
 
   # ─── Styx MCP Server (optional, enable with --profile mcp) ──
+  # SSE transport for internal Docker network access.
   styx-mcp:
     build:
       context: ./styx-mcp-server
@@ -499,6 +500,47 @@ services:
     labels:
       com.styx.service: "styx-mcp"
       com.styx.role: "mcp-server"
+
+  # ─── Styx MCP Server — Remote (Streamable HTTP) ─────────────
+  # Public-facing MCP server for claude.ai, Claude Desktop, and
+  # Claude Code remote connections via https://mcp.styxhq.com/mcp.
+  styx-mcp-remote:
+    build:
+      context: ./styx-mcp-server
+      dockerfile: Dockerfile
+    command: ["python", "server.py", "--transport", "http"]
+    ports:
+      - "8081:8081"
+    environment:
+      MCP_TRANSPORT: http
+      MCP_PORT: "8081"
+      STYX_API_URL: http://backend:8000
+      STYX_PROXY_URL: http://router:8080
+      STYX_API_KEY: ${STYX_API_KEY:-}
+      STYX_TOKEN: ${STYX_TOKEN:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+      router:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c 'import socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.connect((\"localhost\", 8081)); s.close()'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - backend
+      - frontend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+    labels:
+      com.styx.service: "styx-mcp-remote"
+      com.styx.role: "mcp-server-remote"
 
 # ─── Named Volumes ───────────────────────────────────────────────
 volumes:
