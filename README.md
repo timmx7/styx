@@ -243,14 +243,39 @@ This gives you `/styx:setup`, `/styx:status`, and the `@styx-ops` agent for mana
 
 ## MCP Connector
 
-Styx includes a native MCP server. Connect it to Claude, Cursor, or any MCP-compatible client:
+Styx includes a native MCP server. Connect it to Claude, Cursor, or any MCP-compatible client.
+
+### Local (stdio — requires npx)
 
 **Claude Code:**
 ```bash
-claude mcp add --transport http styx http://localhost:8080/mcp
+claude mcp add styx -- npx styx-mcp
 ```
 
-**Claude Desktop / Claude.ai:** Add as a custom connector in Settings > Connectors with URL: `http://localhost:8080/mcp`
+**Cursor:** Add to `.cursor/mcp.json`:
+```json
+{
+  "styx": {
+    "command": "npx",
+    "args": ["styx-mcp"],
+    "env": { "STYX_API_KEY": "your-key" }
+  }
+}
+```
+
+### Remote MCP Server
+
+Connect to a hosted Styx instance without local installation:
+
+**Claude.ai / Claude Desktop:**
+Settings > Connectors > Add custom connector > URL: `https://mcp.styxhq.com/mcp`
+
+**Claude Code:**
+```bash
+claude mcp add --transport http styx https://mcp.styxhq.com/mcp
+```
+
+See [docs/DEPLOY_MCP_REMOTE.md](docs/DEPLOY_MCP_REMOTE.md) for self-hosting the remote MCP server.
 
 ## Examples
 
