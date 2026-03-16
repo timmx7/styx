@@ -41,7 +41,7 @@ jobs:
           - name: cache-service
             context: ./cache-service
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Log in to Container Registry
         uses: docker/login-action@v3
@@ -82,7 +82,7 @@ jobs:
     environment: staging
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
@@ -136,7 +136,7 @@ jobs:
     environment: production
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
