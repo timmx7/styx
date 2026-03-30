@@ -18,7 +18,7 @@ cryptography>=42.0.0
 redis[hiredis]==5.2.1
 
 # Stripe
-stripe==11.3.0
+stripe==15.0.0
 
 # Monitoring
 sentry-sdk[fastapi]>=2.0.0
