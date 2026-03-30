@@ -15,7 +15,7 @@ PyJWT[crypto]==2.9.0
 cryptography>=42.0.0
 
 # Redis
-redis[hiredis]==5.2.1
+redis[hiredis]==7.4.0
 
 # Stripe
 stripe==11.3.0
