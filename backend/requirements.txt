@@ -1,7 +1,7 @@
 # Web framework
 fastapi==0.135.1
 uvicorn[standard]==0.34.0
-pydantic[email]==2.10.3
+pydantic[email]==2.12.5
 pydantic-settings==2.7.0
 
 # Database
